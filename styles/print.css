@@ -1,0 +1,67 @@
+/* 列印：瀏覽器另存 PDF 即為向量輸出。不引入 PDF 函式庫。 */
+@page {
+  size: A4 portrait;
+  margin: 14mm 12mm;
+}
+
+@media print {
+  html, body { height: auto; background: #fff; }
+  body { font-size: 10.5pt; }
+
+  .topbar,
+  .panel--palette,
+  .panel--sequence,
+  .panel__head,
+  .statusbar,
+  .toaster,
+  .modal-root,
+  .doc-actions,
+  .no-print { display: none !important; }
+
+  .app, .workspace { display: block; height: auto; }
+  .panel, .panel--document { display: block; background: #fff; }
+  .panel__body { overflow: visible !important; padding: 0 !important; }
+
+  .document {
+    max-width: none;
+    margin: 0;
+    border: 0;
+    border-radius: 0;
+    padding: 0;
+    gap: 16px;
+  }
+
+  /* 每個節點、每張卡、每個區塊都不跨頁斷開 */
+  .flow__row,
+  .flow__node,
+  .flow__branch,
+  .total-card,
+  .warning-item,
+  .doc-section__head,
+  tr { page-break-inside: avoid; break-inside: avoid; }
+
+  .doc-section { page-break-inside: auto; }
+  .doc-footer { page-break-inside: avoid; break-inside: avoid; }
+
+  table.metrics { font-size: 9.5pt; }
+  table.metrics thead { display: table-header-group; }
+  table.metrics th, table.metrics td { padding: 3px 6px; }
+
+  .narrative__text { font-size: 10pt; line-height: 1.7; }
+
+  /* 保留分類色相，但降低背景飽和，避免吃墨 */
+  .flow__node,
+  .total-card,
+  .warning-item,
+  .metrics__group th { background: #fff !important; }
+  .flow__node { border: 1px solid #b9c0c8; }
+  .blank-marker { background: #ececec !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+
+  a[href]::after { content: ""; }
+}
+
+/* 螢幕上的列印預覽輔助：文件面板本身即所見即所得 */
+@media screen and (max-width: 1180px) {
+  .workspace { grid-template-columns: 190px minmax(280px, 1fr) minmax(360px, 1fr); }
+  .document { padding: 20px 22px; }
+}

@@ -1,0 +1,250 @@
+/* 步驟卡片：序列面板中的可編輯卡。 */
+.sequence { display: flex; flex-direction: column; gap: 8px; }
+.sequence__empty {
+  padding: 28px 16px;
+  text-align: center;
+  color: var(--ink-4);
+  border: 1px dashed var(--line-strong);
+  border-radius: var(--radius);
+  font-size: 13px;
+  line-height: 1.8;
+}
+
+.card {
+  position: relative;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--surface);
+  transition: border-color var(--duration), background var(--duration);
+}
+.card:hover { border-color: var(--line-strong); }
+.card[data-selected="true"] { border-color: var(--accent); }
+.card[data-family="input"] { border-left: 3px solid var(--input); }
+.card[data-family="transform"] { border-left: 3px solid var(--transform); }
+.card[data-family="separate"] { border-left: 3px solid var(--separate); }
+.card[data-dragging="true"] { opacity: 0.45; }
+.card[data-drop="before"] { box-shadow: 0 -2px 0 0 var(--accent); }
+.card[data-drop="after"] { box-shadow: 0 2px 0 0 var(--accent); }
+
+@keyframes flash-change {
+  0% { background: var(--accent-soft); }
+  100% { background: var(--surface); }
+}
+.card[data-flash="true"] { animation: flash-change 1.1s ease-out; }
+
+.card__head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  min-height: 44px;
+}
+.card__handle {
+  display: grid; place-items: center;
+  width: 18px; height: 26px;
+  color: var(--ink-4);
+  cursor: grab;
+  border-radius: 4px;
+}
+.card__handle:hover { color: var(--ink-2); background: var(--surface-3); }
+.card__handle .icon { width: 16px; height: 16px; }
+.card__no {
+  min-width: 22px;
+  font-size: 11.5px;
+  color: var(--ink-4);
+  font-variant-numeric: tabular-nums;
+}
+.card__icon { display: grid; place-items: center; width: 28px; height: 28px; }
+.card__icon .icon { width: 28px; height: 28px; }
+.card[data-family="input"] .card__icon { color: var(--input); }
+.card[data-family="transform"] .card__icon { color: var(--transform); }
+.card[data-family="separate"] .card__icon { color: var(--separate); }
+
+.card__title { display: flex; flex-direction: column; min-width: 0; flex: 1; line-height: 1.3; }
+.card__name { font-size: 13.5px; font-weight: 550; }
+.card__summary {
+  font-size: 12px;
+  color: var(--ink-3);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.card__tools { display: flex; align-items: center; gap: 2px; }
+.card__tools .btn--icon { width: 26px; height: 26px; }
+.card__tools .btn .icon { width: 15px; height: 15px; }
+
+.badge-repeat {
+  position: absolute;
+  top: -7px; right: -7px;
+  display: inline-flex; align-items: center;
+  height: 18px; padding: 0 6px;
+  border-radius: 999px;
+  background: var(--ink);
+  color: #fff;
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.02em;
+}
+
+.card__body {
+  border-top: 1px solid var(--line);
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.card__row { display: grid; gap: 8px; grid-template-columns: repeat(auto-fit, minmax(96px, 1fr)); }
+.card__row--tight { grid-template-columns: repeat(auto-fit, minmax(72px, 1fr)); }
+.card__chips { display: flex; flex-wrap: wrap; gap: 5px; align-items: center; }
+.card__chips-label { font-size: 11.5px; color: var(--ink-4); margin-right: 2px; }
+
+/* 計量按鈕即 amount.mode 的切換 */
+.modes { display: inline-flex; border: 1px solid var(--line-strong); border-radius: var(--radius-sm); overflow: hidden; }
+.mode {
+  padding: 0 9px; height: 26px;
+  font-size: 12px; color: var(--ink-3);
+  border-right: 1px solid var(--line);
+  background: var(--surface);
+}
+.mode:last-child { border-right: 0; }
+.mode:hover { background: var(--surface-2); color: var(--ink); }
+.mode[aria-pressed="true"] { background: var(--accent); color: #fff; }
+
+.derived {
+  display: flex; flex-wrap: wrap; gap: 10px;
+  padding: 7px 9px;
+  border-radius: var(--radius-sm);
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+  font-size: 12px;
+  color: var(--ink-3);
+}
+.derived__item { display: inline-flex; gap: 5px; align-items: baseline; }
+.derived__item b { font-weight: 550; color: var(--ink-2); font-variant-numeric: tabular-nums; }
+.derived__item[data-driver="true"] { color: var(--ink); }
+.derived__item[data-driver="true"] b { color: var(--accent); }
+.derived__warn { color: var(--warn); }
+
+/* 手動輸入：note 為卡片下方小輸入框；freeform 取代整組模板欄位 */
+.note-row { display: flex; align-items: center; gap: 6px; }
+.note-row input { min-height: 28px; font-size: 12.5px; }
+.note-row .icon { width: 15px; height: 15px; color: var(--ink-4); }
+
+.freeform {
+  display: flex; flex-direction: column; gap: 6px;
+  padding: 9px;
+  border: 1px dashed var(--line-strong);
+  border-radius: var(--radius-sm);
+  background: var(--surface-2);
+}
+.freeform__head { display: flex; align-items: center; justify-content: space-between; font-size: 12px; color: var(--ink-3); }
+.card[data-freeform="true"] .card__row,
+.card[data-freeform="true"] .card__chips,
+.card[data-freeform="true"] .modes { opacity: 0.4; pointer-events: none; }
+
+/* 分支 */
+.branch-block {
+  margin: 6px 0 0 22px;
+  padding-left: 12px;
+  border-left: 2px dashed var(--separate-line);
+  display: flex; flex-direction: column; gap: 8px;
+}
+.branch-block__head {
+  display: flex; align-items: center; gap: 6px;
+  font-size: 12px; color: var(--separate);
+}
+.branch-block__head input {
+  height: 26px; min-height: 26px; width: 140px;
+  font-size: 12px;
+  border-color: var(--separate-line);
+  background: var(--separate-soft);
+}
+.branch-block__head .icon { width: 15px; height: 15px; }
+
+/* 化合物選擇器 */
+.picker { position: relative; }
+.picker__list {
+  position: absolute; z-index: 30; top: calc(100% + 3px); left: 0; right: 0;
+  max-height: 260px; overflow: auto;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  box-shadow: 0 6px 20px rgba(16, 20, 26, 0.1);
+  padding: 3px;
+}
+.picker__option {
+  display: flex; align-items: baseline; gap: 7px; width: 100%;
+  padding: 5px 7px; border-radius: 5px; text-align: left; font-size: 13px;
+}
+.picker__option:hover, .picker__option[data-active="true"] { background: var(--accent-soft); }
+.picker__option small { color: var(--ink-4); font-size: 11.5px; }
+.picker__tag {
+  margin-left: auto; font-size: 10.5px; padding: 0 5px; border-radius: 999px;
+  border: 1px solid var(--line); color: var(--ink-4);
+}
+.picker__empty { padding: 8px; font-size: 12.5px; color: var(--ink-4); }
+
+/* 化合物清單 */
+.compounds { display: flex; flex-direction: column; gap: 6px; }
+.compound-row {
+  display: grid;
+  grid-template-columns: minmax(120px, 1fr) 78px 62px 58px 52px 58px 82px 28px;
+  gap: 6px; align-items: center;
+}
+.compound-row input, .compound-row select { min-height: 28px; font-size: 12.5px; padding: 3px 6px; }
+.compound-row__head { font-size: 11px; color: var(--ink-4); }
+.compound-row[data-basis="true"] { background: var(--accent-soft); border-radius: var(--radius-sm); }
+
+/* 對話框與提示 */
+.modal-root:empty { display: none; }
+.modal-backdrop {
+  position: fixed; inset: 0; z-index: 60;
+  background: rgba(20, 24, 30, 0.32);
+  display: grid; place-items: center; padding: 24px;
+}
+.modal {
+  width: min(560px, 100%);
+}
+.modal--wide { width: min(860px, 100%); }
+.modal {
+  max-height: 80vh;
+  display: flex; flex-direction: column;
+  background: var(--surface);
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+}
+.modal__head {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 12px 14px; border-bottom: 1px solid var(--line);
+}
+.modal__head h3 { font-size: 14px; }
+.modal__body { padding: 14px; overflow: auto; display: flex; flex-direction: column; gap: 10px; }
+.modal__foot { display: flex; justify-content: flex-end; gap: 8px; padding: 12px 14px; border-top: 1px solid var(--line); }
+.modal__list { display: flex; flex-direction: column; gap: 4px; }
+.modal__item {
+  display: flex; align-items: center; gap: 8px;
+  padding: 8px 10px; border: 1px solid var(--line); border-radius: var(--radius-sm);
+  font-size: 13px; text-align: left; width: 100%;
+}
+.modal__item:hover { background: var(--surface-2); border-color: var(--line-strong); }
+.modal__item small { color: var(--ink-4); margin-left: auto; }
+
+.toaster {
+  position: fixed; z-index: 80; bottom: 40px; left: 50%; transform: translateX(-50%);
+  display: flex; flex-direction: column; gap: 6px; align-items: center;
+  pointer-events: none;
+}
+.toast {
+  display: flex; align-items: center; gap: 7px;
+  padding: 7px 12px;
+  border-radius: 999px;
+  background: var(--ink);
+  color: #fff;
+  font-size: 12.5px;
+  animation: toast-in 160ms ease-out;
+}
+.toast .icon { width: 15px; height: 15px; }
+.toast[data-tone="warn"] { background: var(--warn); }
+.toast[data-tone="error"] { background: var(--danger); }
+@keyframes toast-in { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }

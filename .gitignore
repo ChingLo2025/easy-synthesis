@@ -1,0 +1,13 @@
+# 規格與內部文件：不公開
+SPEC*.md
+
+# 依賴與產出
+node_modules/
+*.log
+
+# 編輯器與作業系統
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+desktop.ini

@@ -1,0 +1,15 @@
+{
+  "name": "easy-synthesis",
+  "version": "1.0.0",
+  "description": "合成實驗流程圖工具 — 單一 JSON 資料來源，投影出流程圖、計量表、列印稿與敘述文字",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "node tools/serve.mjs",
+    "start": "node tools/serve.mjs",
+    "test": "node --test"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}

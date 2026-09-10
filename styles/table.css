@@ -1,0 +1,128 @@
+/* 文件：上半流程圖、下半計量表、頁尾簽名欄。 */
+.document {
+  max-width: 860px;
+  margin: 0 auto;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  padding: 28px 32px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+}
+.doc-section { display: flex; flex-direction: column; gap: 12px; }
+.doc-section__head { display: flex; align-items: baseline; gap: 8px; border-bottom: 1px solid var(--line); padding-bottom: 6px; }
+.doc-section__head h3 { font-size: 13px; letter-spacing: 0.02em; }
+.doc-section__head small { color: var(--ink-4); font-size: 11.5px; }
+.doc-title { display: flex; flex-direction: column; gap: 3px; }
+.doc-title h1 { font-size: 20px; letter-spacing: -0.02em; }
+.doc-title__meta { display: flex; flex-wrap: wrap; gap: 14px; font-size: 12px; color: var(--ink-3); }
+
+table.metrics { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+table.metrics th, table.metrics td {
+  text-align: right;
+  padding: 5px 8px;
+  border-bottom: 1px solid var(--line);
+  white-space: nowrap;
+}
+table.metrics th {
+  font-size: 11px; font-weight: 600; color: var(--ink-3);
+  letter-spacing: 0.03em; text-transform: uppercase;
+  border-bottom-color: var(--line-strong);
+}
+table.metrics th:first-child, table.metrics td:first-child { text-align: left; width: 34%; white-space: normal; }
+table.metrics th:nth-child(2), table.metrics td:nth-child(2) { text-align: left; }
+table.metrics tbody tr:hover { background: var(--surface-2); }
+table.metrics td.derived-cell { color: var(--ink-3); }
+table.metrics td.driver-cell { color: var(--ink); font-weight: 600; }
+table.metrics td.blank-cell { color: var(--ink-4); }
+table.metrics tr[data-depth="1"] td:first-child { padding-left: 22px; }
+table.metrics tr[data-freeform="true"] td { color: var(--ink-4); font-style: italic; }
+
+.metrics__group th {
+  background: var(--surface-2);
+  color: var(--ink-2);
+  text-transform: none;
+  font-size: 11.5px;
+  letter-spacing: 0;
+  text-align: left;
+  border-bottom-color: var(--line);
+}
+.metrics__no { color: var(--ink-4); font-variant-numeric: tabular-nums; margin-right: 6px; }
+.metrics__repeat {
+  font-size: 10.5px; color: var(--ink-3);
+  border: 1px solid var(--line-strong); border-radius: 999px; padding: 0 5px; margin-left: 6px;
+}
+
+.totals { display: flex; flex-wrap: wrap; gap: 10px; }
+.total-card {
+  flex: 1 1 150px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 9px 11px;
+  background: var(--surface-2);
+}
+.total-card__label { font-size: 11px; color: var(--ink-3); letter-spacing: 0.02em; }
+.total-card__value { font-size: 16px; font-weight: 600; font-variant-numeric: tabular-nums; letter-spacing: -0.01em; }
+.total-card__hint { font-size: 11px; color: var(--ink-4); }
+
+/* 敘述文字 */
+.narrative { display: flex; flex-direction: column; gap: 14px; }
+.narrative__block { display: flex; flex-direction: column; gap: 6px; }
+.narrative__label { font-size: 11px; color: var(--ink-4); letter-spacing: 0.06em; text-transform: uppercase; }
+.narrative__text {
+  font-size: 13.5px; line-height: 1.95; color: var(--ink);
+  white-space: pre-wrap; word-break: break-word;
+}
+.narrative__text--en { font-size: 13px; line-height: 1.8; }
+.blank-marker {
+  background: var(--surface-3);
+  color: var(--ink-3);
+  border-radius: 3px;
+  padding: 0 3px;
+  font-style: normal;
+}
+.narrative__pending {
+  display: inline-flex; align-items: center; gap: 6px;
+  font-size: 12px; color: var(--warn);
+  background: var(--warn-soft); border: 1px solid #f0e0b8;
+  border-radius: 999px; padding: 2px 10px;
+}
+.narrative__pending .icon { width: 14px; height: 14px; }
+
+/* 警告清單 */
+.warnings { display: flex; flex-direction: column; gap: 5px; }
+.warning-item {
+  display: flex; align-items: flex-start; gap: 7px;
+  font-size: 12px; padding: 6px 9px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--line);
+  background: var(--surface-2);
+  color: var(--ink-2);
+}
+.warning-item .icon { width: 14px; height: 14px; margin-top: 2px; flex: none; }
+.warning-item[data-level="error"] { color: var(--danger); background: var(--danger-soft); border-color: #f2cec9; }
+.warning-item[data-level="warn"] { color: var(--warn); background: var(--warn-soft); border-color: #f0e0b8; }
+
+/* 頁尾：批號、日期、操作者、簽名欄 */
+.doc-footer {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+  padding-top: 16px;
+  border-top: 1px solid var(--line-strong);
+  font-size: 11.5px;
+  color: var(--ink-3);
+}
+.doc-footer__cell { display: flex; flex-direction: column; gap: 20px; }
+.doc-footer__label { letter-spacing: 0.04em; }
+.doc-footer__line { border-bottom: 1px solid var(--ink-4); min-height: 1px; }
+.doc-footer__value { color: var(--ink); font-size: 12.5px; min-height: 18px; }
+
+/* 重複步驟在列印時展開為 N 列；螢幕上只顯示一列加 xN */
+.only-print { display: none; }
+.screen-only { display: inline-flex; }
+@media print {
+  .only-print { display: table-row; }
+  .screen-only { display: none !important; }
+}

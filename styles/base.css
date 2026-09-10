@@ -1,0 +1,186 @@
+/* 設計基礎：三類色相、細框線、8px 圓角、無陰影、數字等寬。 */
+:root {
+  /* 中性 */
+  --ink: #16181c;
+  --ink-2: #4c545c;
+  --ink-3: #7d858d;
+  --ink-4: #a3aab1;
+  --line: #e3e6ea;
+  --line-strong: #cfd4da;
+  --bg: #f2f4f6;
+  --surface: #ffffff;
+  --surface-2: #f8f9fb;
+  --surface-3: #eef0f3;
+
+  /* 三類色相：投入 / 轉化 / 分離。其餘近乎單色。 */
+  --input: #2f62c4;
+  --input-soft: #eaf1fd;
+  --input-line: #c3d6f6;
+  --transform: #a95d0a;
+  --transform-soft: #fdf2e6;
+  --transform-line: #f0d7b6;
+  --separate: #0f766e;
+  --separate-soft: #e6f3f1;
+  --separate-line: #b8ded8;
+
+  --accent: #2c5fd0;
+  --accent-soft: #eaf1fd;
+  --danger: #b42318;
+  --danger-soft: #fdedeb;
+  --warn: #92620a;
+  --warn-soft: #fdf5e4;
+
+  --radius: 8px;
+  --radius-sm: 6px;
+  --radius-lg: 12px;
+  --gap: 12px;
+
+  --font-sans: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans TC",
+    "PingFang TC", "Microsoft JhengHei", "Hiragino Sans", sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+
+  --duration: 140ms;
+  color-scheme: light;
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  height: 100%;
+  margin: 0;
+}
+
+body {
+  font-family: var(--font-sans);
+  font-size: 14px;
+  line-height: 1.55;
+  color: var(--ink);
+  background: var(--bg);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+h1, h2, h3, h4 {
+  margin: 0;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+.num, .tabular, input[type="number"], td, th {
+  font-variant-numeric: tabular-nums;
+}
+
+/* 圖示：網格 24，實際線寬固定 1.5px，不隨縮放變粗 */
+.icon {
+  display: block;
+  flex: none;
+  stroke: currentColor;
+  fill: none;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.icon path {
+  stroke-width: 1.5px;
+  vector-effect: non-scaling-stroke;
+}
+
+/* ── 控制元件 ─────────────────────────────────────────────────────────── */
+button {
+  font: inherit;
+  color: inherit;
+  border: 0;
+  background: none;
+  cursor: pointer;
+  padding: 0;
+}
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 30px;
+  padding: 0 10px;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  color: var(--ink-2);
+  font-size: 13px;
+  white-space: nowrap;
+  transition: background var(--duration), border-color var(--duration), color var(--duration);
+}
+.btn:hover { background: var(--surface-2); color: var(--ink); }
+.btn:active { background: var(--surface-3); }
+.btn[disabled] { opacity: 0.4; cursor: default; pointer-events: none; }
+.btn--primary {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+.btn--primary:hover { background: #2554bd; color: #fff; }
+.btn--ghost { border-color: transparent; background: transparent; }
+.btn--ghost:hover { background: var(--surface-3); }
+.btn--danger { color: var(--danger); }
+.btn--danger:hover { background: var(--danger-soft); border-color: #f0c3bd; }
+.btn--icon { width: 30px; padding: 0; justify-content: center; }
+.btn .icon { width: 16px; height: 16px; }
+
+/* 常用條件按鈕：按下即填入 */
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  height: 26px;
+  padding: 0 9px;
+  border: 1px solid var(--line-strong);
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--ink-2);
+  font-size: 12.5px;
+  transition: background var(--duration), border-color var(--duration), color var(--duration);
+}
+.chip:hover { border-color: var(--ink-4); color: var(--ink); }
+.chip[aria-pressed="true"] {
+  background: var(--accent-soft);
+  border-color: var(--input-line);
+  color: var(--input);
+}
+
+input[type="text"], input[type="number"], input[type="date"], textarea, select {
+  width: 100%;
+  font: inherit;
+  color: var(--ink);
+  background: var(--surface);
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-sm);
+  padding: 5px 8px;
+  min-height: 30px;
+  transition: border-color var(--duration), background var(--duration);
+}
+input:focus-visible, textarea:focus-visible, select:focus-visible, .btn:focus-visible, .chip:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+  border-color: var(--accent);
+}
+input::placeholder, textarea::placeholder { color: var(--ink-4); }
+textarea { min-height: 72px; resize: vertical; line-height: 1.6; }
+input[readonly], input[disabled], select[disabled] {
+  background: var(--surface-3);
+  color: var(--ink-3);
+  border-color: var(--line);
+}
+input[type="number"] { -moz-appearance: textfield; }
+input[type="number"]::-webkit-outer-spin-button,
+input[type="number"]::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+
+label { font-size: 12px; color: var(--ink-3); }
+
+.field { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.field__label { font-size: 11.5px; color: var(--ink-3); letter-spacing: 0.01em; }
+.field--derived input { background: var(--surface-3); color: var(--ink-3); }
+
+.muted { color: var(--ink-3); }
+.hidden { display: none !important; }
+.visually-hidden {
+  position: absolute; width: 1px; height: 1px; overflow: hidden;
+  clip: rect(0 0 0 0); clip-path: inset(50%); white-space: nowrap;
+}

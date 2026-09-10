@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>合成實驗流程圖</title>
+<link rel="stylesheet" href="styles/base.css">
+<link rel="stylesheet" href="styles/layout.css">
+<link rel="stylesheet" href="styles/cards.css">
+<link rel="stylesheet" href="styles/flow.css">
+<link rel="stylesheet" href="styles/table.css">
+<link rel="stylesheet" href="styles/print.css">
+</head>
+<body>
+<div class="app">
+
+  <header class="topbar" id="topbar">
+    <div class="topbar__brand">
+      <svg class="brandmark" viewBox="0 0 24 24" aria-hidden="true"><path d="M9.5 3.5v5.2L4.8 17.4a2 2 0 0 0 1.75 3h10.9a2 2 0 0 0 1.75-3L14.5 8.7V3.5"/><path d="M8 3.5h8"/><path d="M7.2 14.5h9.6"/></svg>
+      <span>合成實驗流程圖</span>
+    </div>
+    <div class="topbar__meta" id="metaFields"></div>
+    <div class="topbar__actions" id="topActions"></div>
+  </header>
+
+  <main class="workspace">
+    <aside class="panel panel--palette" id="palette" aria-label="步驟模組"></aside>
+
+    <section class="panel panel--sequence" aria-label="步驟序列">
+      <div class="panel__head">
+        <h2>程序</h2>
+        <div class="panel__head-actions" id="sequenceActions"></div>
+      </div>
+      <div class="panel__body" id="sequence"></div>
+    </section>
+
+    <section class="panel panel--document" aria-label="文件">
+      <div class="panel__head">
+        <div class="tabs" id="docTabs" role="tablist"></div>
+        <div class="panel__head-actions" id="documentActions"></div>
+      </div>
+      <div class="panel__body" id="documentBody">
+        <article class="document" id="document"></article>
+      </div>
+    </section>
+  </main>
+
+  <div class="statusbar" id="statusbar"></div>
+</div>
+
+<div class="toaster" id="toaster" aria-live="polite"></div>
+<div class="modal-root" id="modalRoot"></div>
+
+<script type="module" src="src/main.js"></script>
+</body>
+</html>
