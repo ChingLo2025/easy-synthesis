@@ -1,4 +1,4 @@
-// 流程圖：中軸線。自動排版，線性堆疊，遞迴渲染分支，不需布局引擎。
+// Flow diagram: central axis. Automatic layout, linear stacking, recursive branches, no layout engine.
 import { el } from './dom.js'
 import { iconMarkup } from './icons.js'
 import { inflowLabel, outflowLabel, stepSummary } from './summary.js'
@@ -13,9 +13,9 @@ export function renderFlow(doc, metrics, { selectedId = null, onSelect = null } 
   const flow = el('div', { class: 'flow' })
   if (!doc.steps.length) {
     flow.append(el('div', { class: 'flow__empty' }, [
-      '尚未建立任何步驟。',
+      'No steps yet.',
       el('br'),
-      '主物流沿中央垂直軸由上而下，加入的物質從左側進入，移除的物質從右側離開。',
+      'The main stream runs top to bottom along the central axis; added materials enter from the left and removed materials leave to the right.',
     ]))
     return flow
   }
@@ -24,7 +24,7 @@ export function renderFlow(doc, metrics, { selectedId = null, onSelect = null } 
   appendSteps(flow, doc.steps, { doc, metrics, numbers, selectedId, onSelect, depth: 0 })
 
   const yieldText = metrics?.theoretical?.hasProduct
-    ? [metrics.theoretical.name || '產物', formatMass(metrics.theoretical.mass) ?? formatAmount(metrics.theoretical.n)]
+    ? [metrics.theoretical.name || 'Product', formatMass(metrics.theoretical.mass) ?? formatAmount(metrics.theoretical.n)]
         .filter(Boolean).join(' ')
     : null
   if (yieldText) {
@@ -33,7 +33,7 @@ export function renderFlow(doc, metrics, { selectedId = null, onSelect = null } 
       el('div'),
       el('div', { class: 'flow__terminus' }, [
         el('span', { html: iconMarkup('vessel', { size: 15 }) }),
-        el('span', {}, `理論產量 ${yieldText}`),
+        el('span', {}, `Theoretical yield ${yieldText}`),
       ]),
       el('div'),
     ]))
@@ -90,12 +90,12 @@ function stepRow(step, ctx) {
   ])
 }
 
-/** 分支：右側出口接續的子軸，向右縮排，遞迴渲染 */
+/** Branch: a sub-axis continuing from the right exit, indented to the right, rendered recursively */
 function branchRow(step, ctx) {
   const body = el('div', { class: 'flow__branch-body' })
   if (step.branch.label) body.append(el('span', { class: 'flow__branch-label' }, step.branch.label))
   appendSteps(body, step.branch.steps, { ...ctx, depth: ctx.depth + 1 })
-  // 分支自成一列：左側只留縮排，右側盡量寬，避免子軸被擠爆
+  // A branch gets its own row: only indentation on the left, as wide as possible on the right so the sub-axis isn't squeezed
   return el('div', { class: 'flow__branch-row' }, [
     el('div'),
     el('div', { class: 'flow__branch' }, body),
@@ -107,19 +107,19 @@ function nodeTitle(step, meta, numbers) {
   return no ? `${no}. ${meta.label}` : meta.label
 }
 
-/** 節點只放條件；物質本身在側向箭頭上 */
+/** Nodes show conditions only; the materials go on the side arrows */
 function nodeDetail(step, row, doc) {
   if (step.freeform) return step.freeform.split('\n')[0].slice(0, 48)
   if (step.type === 'add') {
     const bits = []
-    if (step.dissolve) bits.push('預溶')
-    if (step.addMode === 'dropwise') bits.push('滴加')
+    if (step.dissolve) bits.push('Pre-dissolve')
+    if (step.addMode === 'dropwise') bits.push('Dropwise')
     if (step.vessel) bits.push(step.vessel)
     if (step.note) bits.push(step.note)
     return bits.join(' · ')
   }
   if (step.type === 'filter') {
-    return [FILTER_METHODS[step.method]?.label, `保留${FILTER_KEPT[step.kept]?.label ?? '濾液'}`, step.note]
+    return [FILTER_METHODS[step.method]?.label, `Keep ${FILTER_KEPT[step.kept]?.labelEn ?? 'filtrate'}`, step.note]
       .filter(Boolean).join(' · ')
   }
   if (step.type === 'extract' || step.type === 'wash') {

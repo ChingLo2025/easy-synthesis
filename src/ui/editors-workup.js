@@ -1,4 +1,4 @@
-// 後處理的分離步驟：過濾、離心。
+// Workup separation steps: filtration and centrifugation.
 import { el } from './dom.js'
 import { iconMarkup } from './icons.js'
 import { compoundPicker } from './picker.js'
@@ -6,30 +6,30 @@ import { chipRow, field, numberField, row } from './fields.js'
 import { amountBlock, derivedStrip, pickCompound } from './editor-parts.js'
 import { CENTRIFUGE_KEPT, FILTER_KEPT, FILTER_METHODS, SPEED_UNITS } from '../model/steps.js'
 
-/** 過濾：方式、保留濾液或濾餅；濾餅洗液選填，選了才顯示計量與洗滌次數 */
+/** Filter: method, keep filtrate or solid; the cake rinse is optional, and its amount and rinse count show only once chosen */
 export function filterEditor(step, ctx) {
   const { doc, actions, store, row: metrics } = ctx
   const rinse = doc.compounds.find((c) => c.id === step.solventId) ?? null
   const parts = [
-    chipRow('方式', Object.entries(FILTER_METHODS).map(([id, meta]) => ({
+    chipRow('Method', Object.entries(FILTER_METHODS).map(([id, meta]) => ({
       id, label: meta.label, active: step.method === id,
     })), (item) => actions.updateStep(step.id, { method: item.id }), { namespace: 'filterMethod' }),
-    chipRow('保留', Object.entries(FILTER_KEPT).map(([id, meta]) => ({
+    chipRow('Keep', Object.entries(FILTER_KEPT).map(([id, meta]) => ({
       id, label: meta.label, active: step.kept === id,
     })), (item) => actions.updateStep(step.id, { kept: item.id }), { rank: false, namespace: 'filterKept' }),
     el('div', { style: { display: 'flex', gap: '6px', alignItems: 'flex-end' } }, [
-      el('div', { style: { flex: '1', minWidth: '0' } }, field('濾餅洗液（選填）', compoundPicker({
+      el('div', { style: { flex: '1', minWidth: '0' } }, field('Cake rinse (optional)', compoundPicker({
         doc,
         value: step.solventId,
         filter: 'solvent',
-        placeholder: '不洗滌',
+        placeholder: 'No rinse',
         onPick: (choice) => pickCompound(ctx, step.id, 'solventId', choice),
       }))),
       rinse
         ? el('button', {
             class: 'btn btn--ghost btn--icon',
             type: 'button',
-            title: '不洗滌',
+            title: 'No rinse',
             onclick: () => actions.updateStep(step.id, { solventId: null }),
             html: iconMarkup('close', { size: 14 }),
           })
@@ -42,7 +42,7 @@ export function filterEditor(step, ctx) {
     ...parts,
     amountBlock(step, ctx, rinse),
     row([
-      numberField('洗滌次數', {
+      numberField('Rinses', {
         name: 'rinseCount',
         value: step.rinseCount,
         placeholder: '1',
@@ -54,7 +54,7 @@ export function filterEditor(step, ctx) {
   ]
 }
 
-/** 離心：轉速（rpm 或 ×g）、時間、溫度、保留沉澱或上清液 */
+/** Centrifuge: speed (rpm or ×g), time, temperature, keep pellet or supernatant */
 export function centrifugeEditor(step, ctx) {
   const { actions, store } = ctx
   const number = (label, name, suffix) => numberField(label, {
@@ -66,14 +66,14 @@ export function centrifugeEditor(step, ctx) {
   })
   return [
     row([
-      number('轉速', 'speed', SPEED_UNITS[step.speedUnit]?.label ?? 'rpm'),
-      number('時間', 'time', 'min'),
-      number('溫度', 'temp', '°C'),
+      number('Speed', 'speed', SPEED_UNITS[step.speedUnit]?.label ?? 'rpm'),
+      number('Time', 'time', 'min'),
+      number('Temp', 'temp', '°C'),
     ], { tight: true }),
-    chipRow('單位', Object.entries(SPEED_UNITS).map(([id, meta]) => ({
+    chipRow('Unit', Object.entries(SPEED_UNITS).map(([id, meta]) => ({
       id, label: meta.label, active: step.speedUnit === id,
     })), (item) => actions.updateStep(step.id, { speedUnit: item.id }), { rank: false, namespace: 'speedUnit' }),
-    chipRow('保留', Object.entries(CENTRIFUGE_KEPT).map(([id, meta]) => ({
+    chipRow('Keep', Object.entries(CENTRIFUGE_KEPT).map(([id, meta]) => ({
       id, label: meta.label, active: step.kept === id,
     })), (item) => actions.updateStep(step.id, { kept: item.id }), { rank: false, namespace: 'centrifugeKept' }),
   ]

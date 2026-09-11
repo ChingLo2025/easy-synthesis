@@ -4,7 +4,7 @@ import { onTextInput, toNumber } from '../src/ui/fields.js'
 
 const typing = (value, isComposing) => ({ isComposing, target: { value } })
 
-test('組字中（注音、倉頡）的 input 不送出，避免重繪打斷輸入法', () => {
+test('input during composition (Zhuyin, Cangjie) is not sent, so re-renders do not interrupt the IME', () => {
   const seen = []
   const handlers = onTextInput((value) => seen.push(value))
   handlers.oninput(typing('ㄅ', true))
@@ -12,7 +12,7 @@ test('組字中（注音、倉頡）的 input 不送出，避免重繪打斷輸�
   assert.deepEqual(seen, [])
 })
 
-test('組字結束時送出最終文字', () => {
+test('sends the final text when composition ends', () => {
   const seen = []
   const handlers = onTextInput((value) => seen.push(value))
   handlers.oninput(typing('ㄅㄧ', true))
@@ -20,7 +20,7 @@ test('組字結束時送出最終文字', () => {
   assert.deepEqual(seen, ['筆'])
 })
 
-test('一般英數輸入每個字元都送出', () => {
+test('plain alphanumeric input is sent on every character', () => {
   const seen = []
   const handlers = onTextInput((value) => seen.push(value))
   handlers.oninput(typing('B', false))
@@ -28,14 +28,14 @@ test('一般英數輸入每個字元都送出', () => {
   assert.deepEqual(seen, ['B', 'B-'])
 })
 
-test('數值寬鬆解析：輸入中的 "0." 不會變成空值', () => {
+test('lenient number parsing: an in-progress "0." does not become empty', () => {
   assert.equal(toNumber('0.'), 0)
   assert.equal(toNumber(' 1,000 '), 1000)
   assert.equal(toNumber(''), null)
   assert.equal(toNumber('abc'), null)
 })
 
-test('保險：沒收到 compositionend 時，離開欄位的 change 事件仍會提交', () => {
+test('safety net: without compositionend, the change event on leaving the field still commits', () => {
   const seen = []
   const handlers = onTextInput((value) => seen.push(value))
   handlers.oninput(typing('ㄅ', true))

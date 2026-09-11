@@ -1,6 +1,6 @@
-// 單位轉換與格式化。
-// 內部一律 SI：物質量 mol、質量 kg、體積 m³、濃度 mol/m³、莫耳質量 kg/mol、密度 kg/m³。
-// JSON 與介面使用實驗室慣用單位（g、mL、mol/L、g/mol、g/mL），僅在進出邊界轉換。
+// Unit conversion and formatting.
+// Internally always SI: amount mol, mass kg, volume m³, concentration mol/m³, molar mass kg/mol, density kg/m³.
+// JSON and the interface use lab units (g, mL, mol/L, g/mol, g/mL), converted only at the boundary.
 
 export const MASS_UNITS = { kg: 1, g: 1e-3, mg: 1e-6, µg: 1e-9 }
 export const VOLUME_UNITS = { L: 1e-3, mL: 1e-6, µL: 1e-9 }
@@ -8,7 +8,7 @@ export const AMOUNT_UNITS = { mol: 1, mmol: 1e-3, µmol: 1e-6 }
 
 export const BASIS_UNITS = ['g', 'mg', 'kg', 'mL', 'L', 'mol', 'mmol']
 
-/** 判斷 basis 單位屬於哪個維度 */
+/** Which dimension a basis unit belongs to */
 export function dimensionOf(unit) {
   if (unit in MASS_UNITS) return 'mass'
   if (unit in VOLUME_UNITS) return 'volume'
@@ -16,14 +16,14 @@ export function dimensionOf(unit) {
   return null
 }
 
-/** 使用者單位 → SI */
+/** User unit → SI */
 export function toSI(value, unit) {
   if (!isNum(value)) return null
   const factor = MASS_UNITS[unit] ?? VOLUME_UNITS[unit] ?? AMOUNT_UNITS[unit]
   return factor == null ? null : value * factor
 }
 
-// 慣用單位 ↔ SI 的具名捷徑，避免呼叫端散落魔術數字。
+// Named shortcuts between lab units and SI, so callers don't scatter magic numbers.
 export const gToKg = (g) => (isNum(g) ? g * 1e-3 : null)
 export const kgToG = (kg) => (isNum(kg) ? kg * 1e3 : null)
 export const mlToM3 = (ml) => (isNum(ml) ? ml * 1e-6 : null)
@@ -44,7 +44,7 @@ export function isNum(v) {
 const SIG_DIGITS = 3
 
 /**
- * 有效位數格式化。實驗記錄慣例：整數位多時不留小數，微量時保留有效位。
+ * Significant-figure formatting. Lab-notebook convention: no decimals for large integers, keep significant digits for trace amounts.
  */
 export function sig(value, digits = SIG_DIGITS, minDecimals = 0) {
   if (!isNum(value)) return '—'
@@ -54,7 +54,7 @@ export function sig(value, digits = SIG_DIGITS, minDecimals = 0) {
   const magnitude = Math.floor(Math.log10(abs))
   const decimals = Math.min(6, Math.max(0, digits - 1 - magnitude))
   const text = value.toFixed(decimals)
-  // 實驗記錄慣例：質量、莫耳數、當量至少留一位小數（10 -> 10.0）
+  // Lab-notebook convention: mass, moles and equivalents keep at least one decimal (10 -> 10.0)
   return minDecimals ? keepDecimals(text, minDecimals) : trimZeros(text)
 }
 
@@ -68,7 +68,7 @@ function trimZeros(text) {
   return text.includes('.') ? text.replace(/\.?0+$/, '') : text
 }
 
-/** 自動挑選好讀的質量單位（SI kg → 顯示字串） */
+/** Pick a readable mass unit automatically (SI kg → display string) */
 export function formatMass(kg, { unit, minDecimals = 1 } = {}) {
   if (!isNum(kg)) return null
   if (unit) return `${sig(kg / MASS_UNITS[unit], SIG_DIGITS, minDecimals)} ${unit}`
@@ -78,7 +78,7 @@ export function formatMass(kg, { unit, minDecimals = 1 } = {}) {
   return `${sig(g * 1000, SIG_DIGITS, minDecimals)} mg`
 }
 
-/** SI m³ → 顯示字串 */
+/** SI m³ → display string */
 export function formatVolume(m3, { unit } = {}) {
   if (!isNum(m3)) return null
   if (unit) return `${sig(m3 / VOLUME_UNITS[unit])} ${unit}`
@@ -88,7 +88,7 @@ export function formatVolume(m3, { unit } = {}) {
   return `${sig(ml * 1000)} µL`
 }
 
-/** SI mol → 顯示字串 */
+/** SI mol → display string */
 export function formatAmount(mol, { minDecimals = 1 } = {}) {
   if (!isNum(mol)) return null
   if (Math.abs(mol) >= 1) return `${sig(mol, SIG_DIGITS, minDecimals)} mol`
@@ -101,12 +101,12 @@ export function formatEquiv(equiv) {
   return equiv >= 100 ? sig(equiv, 4) : sig(equiv, 3, 1)
 }
 
-/** 顯示溫度、時間等純量，附單位 */
+/** Scalars such as temperature and time, with unit */
 export function withUnit(value, unit, digits) {
   return isNum(value) ? `${sig(value, digits)} ${unit}` : null
 }
 
-/** 分鐘 → 好讀的中文時間 */
+/** Minutes → readable Chinese duration (used only by the Chinese narrative) */
 export function formatDuration(min) {
   if (!isNum(min)) return null
   if (min < 1) return `${sig(min * 60)} 秒`
@@ -116,7 +116,7 @@ export function formatDuration(min) {
   return `${sig(hours)} 小時`
 }
 
-/** 分鐘 → 英文時間 */
+/** Minutes → English duration */
 export function formatDurationEn(min) {
   if (!isNum(min)) return null
   if (min < 1) return `${sig(min * 60)} s`

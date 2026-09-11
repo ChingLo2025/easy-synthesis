@@ -1,4 +1,4 @@
-/* 文件：上半流程圖、下半計量表、頁尾簽名欄。 */
+/* Document: flow diagram on top, quantities table below, signature footer. */
 .document {
   max-width: 860px;
   margin: 0 auto;
@@ -66,7 +66,7 @@ table.metrics tr[data-freeform="true"] td { color: var(--ink-4); font-style: ita
 .total-card__value { font-size: 16px; font-weight: 600; font-variant-numeric: tabular-nums; letter-spacing: -0.01em; }
 .total-card__hint { font-size: 11px; color: var(--ink-4); }
 
-/* 敘述文字 */
+/* Narrative text */
 .narrative { display: flex; flex-direction: column; gap: 14px; }
 .narrative__block { display: flex; flex-direction: column; gap: 6px; }
 .narrative__label { font-size: 11px; color: var(--ink-4); letter-spacing: 0.06em; text-transform: uppercase; }
@@ -90,7 +90,7 @@ table.metrics tr[data-freeform="true"] td { color: var(--ink-4); font-style: ita
 }
 .narrative__pending .icon { width: 14px; height: 14px; }
 
-/* 警告清單 */
+/* Warning list */
 .warnings { display: flex; flex-direction: column; gap: 5px; }
 .warning-item {
   display: flex; align-items: flex-start; gap: 7px;
@@ -104,7 +104,7 @@ table.metrics tr[data-freeform="true"] td { color: var(--ink-4); font-style: ita
 .warning-item[data-level="error"] { color: var(--danger); background: var(--danger-soft); border-color: #f2cec9; }
 .warning-item[data-level="warn"] { color: var(--warn); background: var(--warn-soft); border-color: #f0e0b8; }
 
-/* 頁尾：批號、日期、操作者、簽名欄 */
+/* Footer: batch no., date, operator, signature */
 .doc-footer {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
@@ -119,7 +119,7 @@ table.metrics tr[data-freeform="true"] td { color: var(--ink-4); font-style: ita
 .doc-footer__line { border-bottom: 1px solid var(--ink-4); min-height: 1px; }
 .doc-footer__value { color: var(--ink); font-size: 12.5px; min-height: 18px; }
 
-/* 重複步驟在列印時展開為 N 列；螢幕上只顯示一列加 xN */
+/* Repeated steps expand into N rows when printed; on screen they show as one row with xN */
 .only-print { display: none; }
 .screen-only { display: inline-flex; }
 @media print {

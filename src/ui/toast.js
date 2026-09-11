@@ -1,4 +1,4 @@
-// 短暫提示。復原後的提示文字也走這裡。
+// Brief notifications. Undo messages go through here too.
 import { iconMarkup } from './icons.js'
 
 const DURATION = 2400

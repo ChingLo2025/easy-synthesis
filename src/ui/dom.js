@@ -1,4 +1,4 @@
-// 極小的 DOM 建構工具。沒有框架，但也不要到處寫 createElement。
+// Tiny DOM builder. No framework, but no createElement scattered everywhere either.
 export function el(tag, props = {}, children = []) {
   const node = document.createElement(tag)
   applyProps(node, props)
@@ -53,7 +53,7 @@ export function svg(tag, props = {}, children = []) {
   return node
 }
 
-/** 事件委派：容器上掛一次，靠 data 屬性分派 */
+/** Event delegation: attach once on the container, dispatch by data attributes */
 export function delegate(root, eventName, selector, handler) {
   root.addEventListener(eventName, (event) => {
     const target = event.target.closest(selector)

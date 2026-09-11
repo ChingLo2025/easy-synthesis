@@ -1,4 +1,4 @@
-// 左側面板：七個步驟模組（點擊即追加到序列末尾）、基準設定、化合物與範本入口。
+// Left panel: step modules (click to append to the end of the sequence), basis settings, compound and template entry points.
 import { el, clear } from './dom.js'
 import { iconMarkup } from './icons.js'
 import { compoundPicker } from './picker.js'
@@ -8,15 +8,15 @@ import { bumpUsage } from '../state/prefs.js'
 import { numberInput } from './fields.js'
 
 const MODULE_HINTS = {
-  add: '固體、液體、溶液',
-  stir: '溫度、氣氛、時間',
-  extract: '分液、保留相',
-  wash: '水洗、鹽水洗',
-  filter: '抽氣、矽藻土',
-  centrifuge: '轉速、保留相',
-  evaporate: '旋濃、蒸餾',
-  dry: '乾燥劑、烘箱',
-  monitor: 'TLC、HPLC 追蹤',
+  add: 'Solid, liquid, solution',
+  stir: 'Temp, atmosphere, time',
+  extract: 'Separate, keep a phase',
+  wash: 'Water, brine',
+  filter: 'Vacuum, Celite',
+  centrifuge: 'Speed, keep a phase',
+  evaporate: 'Rotavap, distillation',
+  dry: 'Drying agent, oven',
+  monitor: 'TLC, HPLC',
 }
 
 export function createPalette({ root, store, actions, onOpenCompounds, onOpenTemplates, onSaveTemplate }) {
@@ -40,7 +40,7 @@ export function createPalette({ root, store, actions, onOpenCompounds, onOpenTem
           class: 'module',
           type: 'button',
           dataset: { family: meta.family, type },
-          title: `新增「${meta.label}」步驟`,
+          title: `Add a ${meta.label} step`,
           onclick: () => {
             bumpUsage(`module:${type}`)
             actions.addStep(type)
@@ -54,7 +54,7 @@ export function createPalette({ root, store, actions, onOpenCompounds, onOpenTem
         ]),
       )
     }
-    return group('程序模組', list)
+    return group('Steps', list)
   }
 
   function basisGroup(doc) {
@@ -62,7 +62,7 @@ export function createPalette({ root, store, actions, onOpenCompounds, onOpenTem
     const picker = compoundPicker({
       doc,
       value: basis.compoundId,
-      placeholder: '選擇限量試劑',
+      placeholder: 'Select limiting reagent',
       onPick: (choice) => {
         const id = choice.compoundId ?? actions.addCompound(choice.create).id
         actions.setBasis({ compoundId: id })
@@ -72,7 +72,7 @@ export function createPalette({ root, store, actions, onOpenCompounds, onOpenTem
     const amount = numberInput({
       name: 'basisAmount',
       value: basis.amount,
-      placeholder: '基準量',
+      placeholder: 'Basis amount',
       onInput: (value) => actions.setBasis({ amount: value }),
       onBlur: () => store.flush(),
     })
@@ -81,35 +81,35 @@ export function createPalette({ root, store, actions, onOpenCompounds, onOpenTem
       onchange: (event) => actions.setBasis({ unit: event.target.value }),
     }, BASIS_UNITS.map((u) => el('option', { value: u, selected: basis.unit === u }, u)))
 
-    return group('基準', el('div', { style: { display: 'grid', gap: '6px' }, dataset: { scope: 'basis' } }, [
+    return group('Basis', el('div', { style: { display: 'grid', gap: '6px' }, dataset: { scope: 'basis' } }, [
       picker,
       el('div', { style: { display: 'grid', gridTemplateColumns: '1fr 74px', gap: '6px' } }, [amount, unit]),
-      el('div', { class: 'module__hint', style: { padding: '0 2px' } }, '所有當量以此為分母'),
+      el('div', { class: 'module__hint', style: { padding: '0 2px' } }, 'All equivalents are relative to this'),
     ]))
   }
 
   function compoundGroup(doc) {
     const count = doc.compounds.length
-    return group('化合物', el('button', {
+    return group('Compounds', el('button', {
       class: 'btn',
       type: 'button',
       style: { width: '100%', justifyContent: 'space-between' },
       onclick: onOpenCompounds,
     }, [
-      el('span', {}, count ? `${count} 種化合物` : '尚未建立'),
+      el('span', {}, count ? `${count} compound${count === 1 ? '' : 's'}` : 'None yet'),
       el('span', { class: 'muted', html: iconMarkup('pencil', { size: 14 }) }),
     ]))
   }
 
   function templateGroup() {
-    return group('範本', el('div', { style: { display: 'grid', gap: '6px' } }, [
+    return group('Templates', el('div', { style: { display: 'grid', gap: '6px' } }, [
       el('button', { class: 'btn', type: 'button', style: { width: '100%' }, onclick: onOpenTemplates }, [
         el('span', { html: iconMarkup('template', { size: 14 }) }),
-        el('span', {}, '載入範本'),
+        el('span', {}, 'Load template'),
       ]),
       el('button', { class: 'btn', type: 'button', style: { width: '100%' }, onclick: onSaveTemplate }, [
         el('span', { html: iconMarkup('download', { size: 14 }) }),
-        el('span', {}, '另存為範本'),
+        el('span', {}, 'Save as template'),
       ]),
     ]))
   }

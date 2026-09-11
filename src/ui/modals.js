@@ -1,4 +1,4 @@
-// 對話框：化合物清單、範本、命名輸入。
+// Dialogs: compound list, templates, name prompt.
 import { el, clear } from './dom.js'
 import { iconMarkup } from './icons.js'
 import { ROLES, ROLE_ORDER, STEP_TYPES } from '../model/steps.js'
@@ -47,8 +47,8 @@ function onEscape(event) {
   if (event.key === 'Escape') close()
 }
 
-/** 命名輸入 */
-export function promptModal({ title, label, value = '', confirmText = '儲存', onConfirm }) {
+/** Name prompt */
+export function promptModal({ title, label, value = '', confirmText = 'Save', onConfirm }) {
   const input = el('input', { type: 'text', value, placeholder: label })
   const submit = () => {
     const text = input.value.trim()
@@ -60,7 +60,7 @@ export function promptModal({ title, label, value = '', confirmText = '儲存', 
     title,
     body: [el('div', { class: 'field' }, [el('span', { class: 'field__label' }, label), input])],
     actions: [
-      el('button', { class: 'btn', type: 'button', onclick: close }, '取消'),
+      el('button', { class: 'btn', type: 'button', onclick: close }, 'Cancel'),
       el('button', { class: 'btn btn--primary', type: 'button', onclick: submit }, confirmText),
     ],
   })
@@ -70,7 +70,7 @@ export function promptModal({ title, label, value = '', confirmText = '儲存', 
   }
 }
 
-/** 化合物清單：基準也在這裡設定 */
+/** Compound list; the basis is set here too */
 export function compoundsModal({ store, actions, onChange }) {
   const body = el('div', { style: { display: 'flex', flexDirection: 'column', gap: '10px' } })
 
@@ -79,20 +79,20 @@ export function compoundsModal({ store, actions, onChange }) {
     clear(body)
 
     const header = el('div', { class: 'compound-row compound-row__head' }, [
-      '名稱', 'CAS', 'MW', '密度', '純度', '濃度 M', '角色', '',
+      'Name', 'CAS', 'MW', 'Density', 'Purity', 'Conc. (M)', 'Role', '',
     ].map((text) => el('span', {}, text)))
     body.append(header)
 
     const list = el('div', { class: 'compounds' })
     for (const compound of doc.compounds) list.append(compoundRow(compound, doc))
-    if (!doc.compounds.length) list.append(el('div', { class: 'picker__empty' }, '尚未建立化合物。'))
+    if (!doc.compounds.length) list.append(el('div', { class: 'picker__empty' }, 'No compounds yet.'))
     body.append(list)
 
     body.append(el('div', { style: { display: 'flex', gap: '8px', alignItems: 'center' } }, [
       el('div', { style: { flex: '1' } }, compoundPicker({
         doc,
         value: null,
-        placeholder: '從試劑庫加入…',
+        placeholder: 'Add from reagent library…',
         onPick: (choice) => {
           if (choice.create) actions.addCompound(choice.create)
           render()
@@ -107,7 +107,7 @@ export function compoundsModal({ store, actions, onChange }) {
           render()
           onChange?.()
         },
-      }, [el('span', { html: iconMarkup('plus', { size: 14 }) }), el('span', {}, '空白列')]),
+      }, [el('span', { html: iconMarkup('plus', { size: 14 }) }), el('span', {}, 'Blank row')]),
     ]))
 
     body.append(basisRow(doc))
@@ -116,7 +116,7 @@ export function compoundsModal({ store, actions, onChange }) {
 
   function compoundRow(compound, doc) {
     const isBasis = doc.basis.compoundId === compound.id
-    // 名稱逐字輸入時不寫入個人庫，欄位提交（blur）才記
+    // Typing a name char by char doesn't write to the personal library; it's recorded when the field commits (blur)
     const commit = () => { store.flush(); actions.commitCompound(compound.id); onChange?.() }
     const text = (field, placeholder) => el('input', {
       type: 'text',
@@ -133,7 +133,7 @@ export function compoundsModal({ store, actions, onChange }) {
     })
 
     return el('div', { class: 'compound-row', dataset: { basis: String(isBasis) } }, [
-      text('name', '化合物名稱'),
+      text('name', 'Compound name'),
       text('cas', 'CAS'),
       number('mw', 'g/mol'),
       number('density', 'g/mL'),
@@ -145,14 +145,14 @@ export function compoundsModal({ store, actions, onChange }) {
       el('button', {
         class: 'btn btn--ghost btn--icon btn--danger',
         type: 'button',
-        title: '刪除',
+        title: 'Delete',
         onclick: () => { actions.removeCompound(compound.id); render(); onChange?.() },
         html: iconMarkup('trash', { size: 14 }),
       }),
     ])
   }
 
-  /** 產物只用於理論產量換算，不參與流程 */
+  /** The product is only used for the theoretical yield and is not part of the flow */
   function productRow(doc) {
     const product = doc.meta?.product ?? {}
     const patch = (fields) => actions.setMeta(
@@ -160,12 +160,12 @@ export function compoundsModal({ store, actions, onChange }) {
       { key: 'meta:product' },
     )
     return el('div', { style: { display: 'flex', gap: '8px', alignItems: 'center' } }, [
-      el('span', { class: 'field__label' }, '產物（選填）'),
+      el('span', { class: 'field__label' }, 'Product (optional)'),
       el('input', {
         type: 'text',
         style: { width: '200px' },
         value: product.name ?? '',
-        placeholder: '產物名稱',
+        placeholder: 'Product name',
         ...onTextInput((name) => patch({ name })),
         onblur: () => { store.flush(); onChange?.() },
       }),
@@ -175,29 +175,29 @@ export function compoundsModal({ store, actions, onChange }) {
         onInput: (mw) => patch({ mw }),
         onBlur: () => { store.flush(); onChange?.() },
       }), '110px'),
-      el('span', { class: 'muted', style: { fontSize: '12px' } }, '填分子量才能換算理論產量質量'),
+      el('span', { class: 'muted', style: { fontSize: '12px' } }, 'Enter the MW to convert the theoretical yield to mass'),
     ])
   }
 
   function basisRow(doc) {
     return el('div', { style: { display: 'flex', gap: '8px', alignItems: 'center', paddingTop: '8px', borderTop: '1px solid var(--line)' } }, [
-      el('span', { class: 'field__label' }, '基準（限量試劑）'),
+      el('span', { class: 'field__label' }, 'Basis (limiting reagent)'),
       el('select', {
         style: { width: '200px' },
         onchange: (event) => { actions.setBasis({ compoundId: event.target.value || null }); render(); onChange?.() },
       }, [
-        el('option', { value: '' }, '未設定'),
-        ...doc.compounds.map((c) => el('option', { value: c.id, selected: doc.basis.compoundId === c.id }, c.name || '（未命名）')),
+        el('option', { value: '' }, 'Not set'),
+        ...doc.compounds.map((c) => el('option', { value: c.id, selected: doc.basis.compoundId === c.id }, c.name || '(unnamed)')),
       ]),
-      el('span', { class: 'muted', style: { fontSize: '12px' } }, '所有當量以此為分母'),
+      el('span', { class: 'muted', style: { fontSize: '12px' } }, 'All equivalents are relative to this'),
     ])
   }
 
   render()
-  return openModal({ title: '化合物與基準', body, wide: true, actions: [el('button', { class: 'btn btn--primary', type: 'button', onclick: close }, '完成')] })
+  return openModal({ title: 'Compounds & basis', body, wide: true, actions: [el('button', { class: 'btn btn--primary', type: 'button', onclick: close }, 'Done')] })
 }
 
-/** 範本：整份程序、步驟群組 */
+/** Templates: whole procedures and step groups */
 export function templatesModal({ store, onLoadTemplate, onInsertGroup, listTemplates, listGroups, deleteTemplate, deleteGroup, onSaveGroup }) {
   const body = el('div', { style: { display: 'flex', flexDirection: 'column', gap: '14px' } })
 
@@ -206,23 +206,23 @@ export function templatesModal({ store, onLoadTemplate, onInsertGroup, listTempl
     const templates = listTemplates()
     const groups = listGroups()
 
-    body.append(sectionTitle('整份範本', '載入時連化合物清單一併帶入，並重置復原歷史'))
+    body.append(sectionTitle('Procedure templates', 'Loading also brings in the compound list and resets undo history'))
     body.append(templates.length
-      ? el('div', { class: 'modal__list' }, templates.map((entry) => entryRow(entry, `${entry.steps} 步`, () => {
+      ? el('div', { class: 'modal__list' }, templates.map((entry) => entryRow(entry, `${entry.steps} steps`, () => {
           close()
           onLoadTemplate(entry)
         }, () => { deleteTemplate(entry.id); render() })))
-      : el('div', { class: 'picker__empty' }, '尚無範本。可從目前程序「另存為範本」。'))
+      : el('div', { class: 'picker__empty' }, 'No templates yet. Use “Save as template” on the current procedure.'))
 
-    body.append(sectionTitle('步驟群組', '例如標準水相後處理'))
+    body.append(sectionTitle('Step groups', 'e.g. a standard aqueous workup'))
     body.append(groups.length
-      ? el('div', { class: 'modal__list' }, groups.map((entry) => entryRow(entry, `${entry.steps.length} 步`, () => {
+      ? el('div', { class: 'modal__list' }, groups.map((entry) => entryRow(entry, `${entry.steps.length} steps`, () => {
           close()
           onInsertGroup(entry)
         }, () => { deleteGroup(entry.id); render() })))
-      : el('div', { class: 'picker__empty' }, '尚無群組。'))
+      : el('div', { class: 'picker__empty' }, 'No groups yet.'))
 
-    body.append(sectionTitle('從目前程序建立群組', '勾選要收進群組的步驟'))
+    body.append(sectionTitle('Create a group from this procedure', 'Tick the steps to include'))
     body.append(groupBuilder())
   }
 
@@ -243,7 +243,7 @@ export function templatesModal({ store, onLoadTemplate, onInsertGroup, listTempl
       ]))
     })
 
-    if (!doc.steps.length) return el('div', { class: 'picker__empty' }, '目前程序沒有步驟。')
+    if (!doc.steps.length) return el('div', { class: 'picker__empty' }, 'This procedure has no steps.')
 
     wrap.append(el('button', {
       class: 'btn',
@@ -253,12 +253,12 @@ export function templatesModal({ store, onLoadTemplate, onInsertGroup, listTempl
         const selected = doc.steps.filter((step) => checks.get(step.id)?.checked)
         if (!selected.length) return
         promptModal({
-          title: '儲存步驟群組',
-          label: '群組名稱',
+          title: 'Save step group',
+          label: 'Group name',
           onConfirm: (name) => onSaveGroup(name, selected),
         })
       },
-    }, '儲存為群組'))
+    }, 'Save as group'))
     return wrap
   }
 
@@ -279,7 +279,7 @@ export function templatesModal({ store, onLoadTemplate, onInsertGroup, listTempl
       el('button', {
         class: 'btn btn--ghost btn--icon btn--danger',
         type: 'button',
-        title: '刪除',
+        title: 'Delete',
         onclick: onDelete,
         html: iconMarkup('trash', { size: 14 }),
       }),
@@ -287,5 +287,5 @@ export function templatesModal({ store, onLoadTemplate, onInsertGroup, listTempl
   }
 
   render()
-  return openModal({ title: '範本', body })
+  return openModal({ title: 'Templates', body })
 }

@@ -1,9 +1,9 @@
-// JSON 匯入匯出。round-trip 不失真：normalize 只補欄位，不刪未知欄位。
+// JSON import/export. Lossless round-trip: normalize only fills in fields and never drops unknown ones.
 import { normalizeDocument, serializeDocument } from '../model/schema.js'
 
 export function downloadDocument(doc) {
   const text = serializeDocument(doc)
-  const name = safeFileName(doc.meta?.title || '合成程序')
+  const name = safeFileName(doc.meta?.title || 'synthesis-procedure')
   download(`${name}.json`, text, 'application/json')
 }
 
@@ -19,7 +19,7 @@ export function download(filename, text, type = 'text/plain') {
   setTimeout(() => URL.revokeObjectURL(url), 1000)
 }
 
-/** 開啟檔案選擇器並解析 JSON */
+/** Open a file picker and parse the JSON */
 export function pickDocument() {
   return new Promise((resolve, reject) => {
     const input = document.createElement('input')
@@ -31,7 +31,7 @@ export function pickDocument() {
       try {
         resolve(normalizeDocument(JSON.parse(await file.text())))
       } catch (error) {
-        reject(new Error(`無法讀取檔案：${error.message}`))
+        reject(new Error(`Could not read the file: ${error.message}`))
       }
     }
     input.click()

@@ -1,4 +1,4 @@
-// 零依賴靜態伺服器。ES modules 需要 http(s) 來源，不能用 file:// 開啟。
+// Zero-dependency static server. ES modules need an http(s) origin and can't be opened via file://.
 import { createServer } from 'node:http'
 import { readFile, stat } from 'node:fs/promises'
 import { extname, join, normalize, resolve } from 'node:path'

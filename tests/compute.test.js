@@ -6,7 +6,7 @@ import { formatAmount, formatMass, formatVolume } from '../src/model/units.js'
 
 const close = (actual, expected, tolerance = 1e-9) =>
   assert.ok(Math.abs(actual - expected) <= tolerance * Math.max(1, Math.abs(expected)),
-    `${actual} 與 ${expected} 差距過大`)
+    `${actual} vs ${expected}: difference too large`)
 
 function baseDoc(overrides = {}) {
   const doc = createDocument()
@@ -28,7 +28,7 @@ test('n = m x purity / MW', () => {
   assert.equal(rows[0].equiv, 1)
 })
 
-test('當量以 basis 為分母，並反推質量', () => {
+test('equivalents use the basis as denominator and back-calculate mass', () => {
   const doc = baseDoc()
   doc.compounds.push(createCompound({ id: 'R', name: 'R', mw: 150, purity: 1, role: 'reagent' }))
   doc.steps = [createStep('add', { compoundId: 'R', amount: { mode: 'equiv', value: 1.5 } })]
@@ -38,7 +38,7 @@ test('當量以 basis 為分母，並反推質量', () => {
   assert.equal(formatMass(rows[0].mass), '11.0 g')
 })
 
-test('mol% 等同當量除以一百', () => {
+test('mol% equals equivalents divided by one hundred', () => {
   const doc = baseDoc()
   doc.compounds.push(createCompound({ id: 'CAT', name: 'Pd', mw: 106.4, role: 'catalyst' }))
   doc.steps = [createStep('add', { compoundId: 'CAT', amount: { mode: 'mol%', value: 5 } })]
@@ -46,7 +46,7 @@ test('mol% 等同當量除以一百', () => {
   close(rows[0].equiv, 0.05)
 })
 
-test('純液體 V = m / rho，體積驅動時反推質量', () => {
+test('neat liquid V = m / rho; volume-driven rows back-calculate mass', () => {
   const doc = baseDoc()
   doc.steps = [createStep('add', { compoundId: 'SOL', amount: { mode: 'volume', value: 40 } })]
   const { rows } = compute(doc)
@@ -54,7 +54,7 @@ test('純液體 V = m / rho，體積驅動時反推質量', () => {
   assert.equal(formatVolume(rows[0].volume), '40 mL')
 })
 
-test('溶液 n = C x V', () => {
+test('solution n = C x V', () => {
   const doc = baseDoc()
   doc.steps = [createStep('add', { compoundId: 'AQ', amount: { mode: 'volume', value: 25 } })]
   const { rows } = compute(doc)
@@ -62,14 +62,14 @@ test('溶液 n = C x V', () => {
   assert.equal(formatAmount(rows[0].n), '25.0 mmol')
 })
 
-test('V/W 以基準物質量換算溶劑體積', () => {
+test('V/W converts solvent volume from the basis mass', () => {
   const doc = baseDoc()
   doc.steps = [createStep('add', { compoundId: 'SOL', amount: { mode: 'vol_per_g', value: 5 } })]
   const { rows } = compute(doc)
   assert.equal(formatVolume(rows[0].volume), '50 mL')
 })
 
-test('repeat 為照原樣重複 N 次，總量 = N x 單次量', () => {
+test('repeat repeats N times as is; total = N x single amount', () => {
   const doc = baseDoc()
   doc.steps = [createStep('wash', { solventId: 'SOL', amount: { mode: 'volume', value: 20 }, repeat: 3 })]
   const { rows } = compute(doc)
@@ -77,7 +77,7 @@ test('repeat 為照原樣重複 N 次，總量 = N x 單次量', () => {
   close(rows[0].totalVolume, 6e-5)
 })
 
-test('溶劑總量分為反應槽與全程', () => {
+test('total solvent splits into reaction vessel and whole process', () => {
   const doc = baseDoc()
   doc.steps = [
     createStep('add', { compoundId: 'SOL', amount: { mode: 'volume', value: 50 } }),
@@ -88,7 +88,7 @@ test('溶劑總量分為反應槽與全程', () => {
   assert.equal(formatVolume(solvent.total), '90 mL')
 })
 
-test('理論產量以基準莫耳數為上限，有產物 MW 才換算質量', () => {
+test('theoretical yield is capped by basis moles; mass only with a product MW', () => {
   const doc = baseDoc()
   const withoutProduct = compute(doc)
   assert.equal(withoutProduct.theoretical.mass, null)
@@ -97,17 +97,17 @@ test('理論產量以基準莫耳數為上限，有產物 MW 才換算質量', (
   close(withProduct.theoretical.mass, 0.049 * 0.3)
 })
 
-test('freeform 步驟不參與計量', () => {
+test('freeform steps are excluded from quantities', () => {
   const doc = baseDoc()
   doc.steps = [createStep('add', {
-    compoundId: 'SM', amount: { mode: 'mass', value: 10 }, freeform: '自行描述',
+    compoundId: 'SM', amount: { mode: 'mass', value: 10 }, freeform: 'custom description',
   })]
   const { rows } = compute(doc)
   assert.equal(rows[0].n, null)
   assert.equal(rows[0].freeform, true)
 })
 
-test('缺基準時給出錯誤，缺分子量時給出提醒', () => {
+test('a missing basis gives an error, a missing MW gives a warning', () => {
   const doc = createDocument()
   doc.compounds = [createCompound({ id: 'X', name: 'X', role: 'reactant' })]
   doc.steps = [createStep('add', { compoundId: 'X', amount: { mode: 'mass', value: 1 } })]
@@ -116,20 +116,20 @@ test('缺基準時給出錯誤，缺分子量時給出提醒', () => {
   assert.ok(warnings.some((w) => w.code === 'incomplete'))
 })
 
-test('分支步驟一併計入，並在達深度上限時提醒', () => {
+test('branch steps are included, with a warning at the depth limit', () => {
   const doc = baseDoc()
   const outer = createStep('extract', { solventId: 'SOL', amount: { mode: 'volume', value: 30 } })
   const inner = createStep('wash', { solventId: 'SOL', amount: { mode: 'volume', value: 10 } })
-  inner.branch = { label: '第二層', steps: [createStep('evaporate')] }
-  outer.branch = { label: '水層', steps: [inner] }
+  inner.branch = { label: 'second level', steps: [createStep('evaporate')] }
+  outer.branch = { label: 'aqueous layer', steps: [inner] }
   doc.steps = [outer]
   const { rows, warnings } = compute(doc)
   assert.equal(rows.length, 3)
-  assert.equal(rows[1].branchLabel, '水層')
+  assert.equal(rows[1].branchLabel, 'aqueous layer')
   assert.ok(warnings.some((w) => w.code === 'depth'))
 })
 
-test('基準可用體積或莫耳數表示', () => {
+test('the basis can be expressed as volume or moles', () => {
   const doc = baseDoc()
   doc.basis = { compoundId: 'SOL', amount: 10, unit: 'mL' }
   close(compute(doc).basis.n, (1e-5 * 1250) / 0.1)

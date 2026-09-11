@@ -1,4 +1,4 @@
-// 兩層範本：整份程序範本（連化合物清單一併帶入），以及步驟群組。
+// Two levels of templates: whole-procedure templates (which bring the compound list along) and step groups.
 import { KEYS, load, save } from '../state/persist.js'
 import { cloneDocument, mapCompoundRefs, normalizeDocument, walkSteps } from '../model/schema.js'
 import { uid } from '../model/ids.js'
@@ -12,7 +12,7 @@ export function saveTemplate(name, doc) {
   const list = listTemplates()
   const entry = {
     id: uid('tpl'),
-    name: name.trim() || '未命名範本',
+    name: name.trim() || 'Untitled template',
     savedAt: Date.now(),
     steps: countSteps(doc),
     doc: cloneDocument(doc),
@@ -26,21 +26,21 @@ export function deleteTemplate(id) {
   save(KEYS.templates, listTemplates().filter((item) => item.id !== id))
 }
 
-/** 載入整份範本：呼叫端需重置歷史，不疊加（§5） */
+/** Load a whole template: the caller must reset history instead of stacking onto it (§5) */
 export function templateToDocument(entry) {
   const doc = normalizeDocument(cloneDocument(entry.doc))
   doc.meta = { ...doc.meta, date: new Date().toISOString().slice(0, 10) }
   return doc
 }
 
-// ── 步驟群組 ───────────────────────────────────────────────────────────────
+// ── Step groups ───────────────────────────────────────────────────────────────
 
 export function listGroups() {
   const list = load(KEYS.groups, [])
   return Array.isArray(list) ? list : []
 }
 
-/** 選取數個步驟存為群組，例：標準水相後處理 */
+/** Save selected steps as a group, e.g. a standard aqueous workup */
 export function saveGroup(name, steps, compounds = []) {
   const list = listGroups()
   const used = new Set()
@@ -50,7 +50,7 @@ export function saveGroup(name, steps, compounds = []) {
   })))
   const entry = {
     id: uid('grp'),
-    name: name.trim() || '未命名群組',
+    name: name.trim() || 'Untitled group',
     savedAt: Date.now(),
     steps: structuredClone(steps),
     compounds: compounds.filter((compound) => used.has(compound.id)),
@@ -65,8 +65,8 @@ export function deleteGroup(id) {
 }
 
 /**
- * 把群組展開成可插入的步驟：化合物以名稱比對既有清單，缺的補建。
- * 回傳 { steps, compounds } —— compounds 為需要新增到文件的化合物。
+ * Expand a group into insertable steps: compounds are matched by name against the existing list, and missing ones are created.
+ * Returns { steps, compounds }, where compounds are the ones that must be added to the document.
  */
 export function expandGroup(entry, doc) {
   const idMap = new Map()

@@ -1,4 +1,4 @@
-// localStorage 薄封裝。瀏覽器隱私模式或配額滿時不得讓整個應用崩潰，故一律 try/catch。
+// Thin localStorage wrapper. Private mode or a full quota must not crash the app, so everything is wrapped in try/catch.
 const NAMESPACE = 'easy-synthesis'
 
 export const KEYS = {
@@ -36,11 +36,11 @@ export function remove(key) {
   try {
     localStorage.removeItem(fullKey(key))
   } catch {
-    /* 忽略：無儲存空間時功能降級即可 */
+    /* Ignore: without storage the feature simply degrades */
   }
 }
 
-/** 節流寫入，避免每次輸入都碰硬碟 */
+/** Throttled writes, so not every keystroke touches storage */
 export function throttledSave(key, delay = 400) {
   let timer = null
   let latest = null

@@ -1,43 +1,43 @@
-// 圖示：單一 JS 模組，每個圖示為 path 字串陣列，內聯渲染（§6）。
+// Icons: a single JS module; each icon is an array of path strings, rendered inline (§6).
 //
-// 繪製規則
-//   - 網格 24 x 24，不隨顯示尺寸改變；渲染尺寸由呼叫端給（預設 28px）
-//   - stroke-width 由 CSS 設定並用 vector-effect 維持實際 1.5px，不隨縮放變粗
-//   - round cap / join；stroke="currentColor"，不寫死顏色
-//   - 保持 stroke，不 outline 成 path
-//   - 直線中心對齊 .5 座標；圓形物體畫得略大於方形，取光學平衡
-//   - 容器類（燒瓶、漏斗、分液漏斗）用封閉輪廓，動作類（攪拌、乾燥）用開放筆畫
+// Drawing rules
+//   - 24 x 24 grid regardless of display size; the render size comes from the caller (default 28px)
+//   - stroke-width is set in CSS, with vector-effect keeping an actual 1.5px that doesn't thicken when scaled
+//   - round cap / join; stroke="currentColor", no hard-coded colours
+//   - keep strokes; don't outline them into paths
+//   - straight lines centred on .5 coordinates; round shapes drawn slightly larger than square ones for optical balance
+//   - containers (flask, funnel, separatory funnel) use closed outlines; actions (stir, dry) use open strokes
 
 export const ICON_SIZE = 28
 
 export const ICONS = Object.freeze({
-  // ── 步驟型別 ─────────────────────────────────────────────────────────────
-  // 加入物質：箭頭落入敞口容器
+  // ── Step types ─────────────────────────────────────────────────────────────
+  // Add: arrow dropping into an open vessel
   add: ['M12.5 3.5v6.5', 'M9.5 7.5l3 3 3-3', 'M5.5 13.5h14', 'M7.5 13.5v3.6a3.4 3.4 0 0 0 3.4 3.4h3.2a3.4 3.4 0 0 0 3.4-3.4v-3.6'],
-  // 攪拌：旋轉弧線與磁石
+  // Stir: rotating arc and stir bar
   stir: ['M18.16 6.84A8 8 0 1 1 6.9 6.9', 'M13.4 5.1l4.9 1.6-1.6 4.9', 'M9.5 12.5h6'],
-  // 萃取：分液漏斗，含相界面與旋塞
+  // Extract: separatory funnel with phase boundary and stopcock
   extract: ['M8.5 4.5h7l-2.5 7.5v5.5h-2v-5.5z', 'M9.9 9.5h4.4', 'M9.5 15.5h5'],
-  // 水洗：水滴與水波
+  // Wash: droplet and waves
   wash: ['M12.5 3.5c3 3.7 4.5 6.2 4.5 8.1a4.5 4.5 0 0 1-9 0c0-1.9 1.5-4.4 4.5-8.1z', 'M4.5 18.5c1.8-1.6 3.2-1.6 5 0s3.2 1.6 5 0 3.2-1.6 5 0'],
-  // 濃縮：圓底燒瓶與逸出的溶劑蒸氣
+  // Concentrate: round-bottom flask with escaping solvent vapour
   evaporate: ['M10.5 3.5h4', 'M11.5 3.5v4.9a5.8 5.8 0 1 0 2 0V3.5', 'M19.5 10.5v-6', 'M17.5 6.5l2-2 2 2'],
-  // 乾燥：水滴加斜線，去水之意
+  // Dry: droplet with a slash, i.e. water removed
   dry: ['M12.5 5.2c2.4 3 3.7 5 3.7 6.6a3.7 3.7 0 0 1-7.4 0c0-1.6 1.3-3.6 3.7-6.6z', 'M6.5 18.5l12-12'],
-  // 取樣／追蹤：TLC 板與展開點
+  // Monitor: TLC plate with spots
   monitor: ['M7.5 3.5h9a1 1 0 0 1 1 1v15a1 1 0 0 1-1 1h-9a1 1 0 0 1-1-1v-15a1 1 0 0 1 1-1z', 'M6.5 16.5h11', 'M10.2 11.4a1.3 1.3 0 1 0 0-.01z', 'M14.3 8.4a1.3 1.3 0 1 0 0-.01z'],
-  // 過濾：漏斗與濾紙上的液面
+  // Filter: funnel with the liquid level on the filter paper
   filter: ['M4.5 4.5h16l-6 7.5v6.5l-4 2v-8.5z', 'M8.2 8.5h8.6'],
-  // 離心：轉子俯視，三個離心管槽（圓形物體略大，取光學平衡）
+  // Centrifuge: rotor seen from above with three tube slots (round shapes slightly larger for optical balance)
   centrifuge: ['M12.5 4a8.5 8.5 0 1 0 0 17 8.5 8.5 0 0 0 0-17z', 'M12.5 6.7a1.4 1.4 0 1 0 0 2.8 1.4 1.4 0 0 0 0-2.8z', 'M16.3 13.4a1.4 1.4 0 1 0 0 2.8 1.4 1.4 0 0 0 0-2.8z', 'M8.7 13.4a1.4 1.4 0 1 0 0 2.8 1.4 1.4 0 0 0 0-2.8z'],
 
-  // ── 流程與結構 ───────────────────────────────────────────────────────────
+  // ── Flow & structure ───────────────────────────────────────────────────────────
   branch: ['M6.5 4.5v9a3 3 0 0 0 3 3h8', 'M14.5 13.5l3 3-3 3', 'M6.5 18.5v1.5'],
   repeat: ['M4.5 9.5h12a3 3 0 0 1 3 3', 'M13.5 6.5l3 3-3 3', 'M19.5 14.5h-12a3 3 0 0 1-3-3', 'M10.5 17.5l-3-3 3-3'],
   drag: ['M9.5 6.5h.01', 'M9.5 12.5h.01', 'M9.5 18.5h.01', 'M15.5 6.5h.01', 'M15.5 12.5h.01', 'M15.5 18.5h.01'],
   vessel: ['M9.5 3.5v5.4L5.2 17a2.6 2.6 0 0 0 2.3 3.9h10a2.6 2.6 0 0 0 2.3-3.9L15.5 8.9V3.5', 'M8.5 3.5h8', 'M7.6 14.5h9.8'],
 
-  // ── 操作 ────────────────────────────────────────────────────────────────
+  // ── Actions ────────────────────────────────────────────────────────────────
   plus: ['M12.5 5.5v14', 'M5.5 12.5h14'],
   minus: ['M5.5 12.5h14'],
   close: ['M6.5 6.5l12 12', 'M18.5 6.5l-12 12'],
@@ -63,7 +63,7 @@ export const ICONS = Object.freeze({
 })
 
 /**
- * 產生 SVG 字串。顏色與線寬由 CSS 決定，這裡只給幾何。
+ * Build an SVG string. Colour and stroke width come from CSS; only geometry here.
  */
 export function iconMarkup(name, { size = ICON_SIZE, className = '', title = '' } = {}) {
   const paths = ICONS[name]
@@ -74,7 +74,7 @@ export function iconMarkup(name, { size = ICON_SIZE, className = '', title = '' 
   return `<svg class="icon ${className}" viewBox="0 0 24 24" width="${size}" height="${size}" fill="none" stroke="currentColor" ${aria}>${label}${body}</svg>`
 }
 
-/** 產生 SVG 元素（需要掛事件或後續改動時用） */
+/** Build an SVG element (when events or later changes are needed) */
 export function iconElement(name, options = {}) {
   const wrapper = document.createElement('span')
   wrapper.innerHTML = iconMarkup(name, options)

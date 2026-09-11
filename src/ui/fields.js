@@ -1,8 +1,8 @@
-// 卡片內的欄位小工具。所有輸入都在 blur 時 flush，讓連續輸入合併為一筆歷史。
+// Small field widgets inside cards. Every input flushes on blur, so continuous typing merges into one history entry.
 import { el } from './dom.js'
 import { bumpUsage, rankByUsage } from '../state/prefs.js'
 
-/** 寬鬆解析：輸入中的 "0." 不該被吃掉，交給焦點還原保留原字串 */
+/** Lenient parse: an in-progress "0." must not be swallowed; focus restore keeps the raw string */
 export function toNumber(value) {
   if (value === null || value === undefined) return null
   const text = String(value).trim().replace(/,/g, '')
@@ -12,8 +12,8 @@ export function toNumber(value) {
 }
 
 /**
- * 文字輸入事件。組字中（注音、倉頡等）的 input 不送出，等 compositionend 才更新：
- * 全量重繪會換掉輸入框，組字途中重繪會讓輸入法的候選字整段消失。
+ * Text input events. Input during composition (Zhuyin, Cangjie, etc.) is not sent; update on compositionend instead:
+ * a full re-render replaces the input, and re-rendering mid-composition wipes out the IME candidates.
  */
 export function onTextInput(handler) {
   return {
@@ -21,14 +21,14 @@ export function onTextInput(handler) {
       if (!event.isComposing) handler(event.target.value)
     },
     oncompositionend: (event) => handler(event.target.value),
-    // 保險：萬一瀏覽器沒送 compositionend，離開欄位時仍會提交；值沒變時由 actions 略過
+    // Safety net: if the browser never fires compositionend, leaving the field still commits; unchanged values are skipped by actions
     onchange: (event) => handler(event.target.value),
   }
 }
 
 /**
- * 數值輸入一律用 type="text" + inputmode="decimal"。
- * type="number" 在輸入 "0." 這類中間狀態時會把值清成空字串，游標與內容都會跳掉。
+ * Numeric inputs always use type="text" + inputmode="decimal".
+ * type="number" clears the value on intermediate states such as "0.", making the caret and content jump.
  */
 export function numberInput({ value, placeholder = '', name = null, onInput, onBlur }) {
   return el('input', {
@@ -49,7 +49,7 @@ export function field(label, control) {
 }
 
 export function numberField(label, { value, onInput, onBlur, placeholder = '', suffix = '', name = null }) {
-  return field(suffix ? `${label}（${suffix}）` : label, numberInput({ value, placeholder, name, onInput, onBlur }))
+  return field(suffix ? `${label} (${suffix})` : label, numberInput({ value, placeholder, name, onInput, onBlur }))
 }
 
 export function textField(label, { value, onInput, onBlur, placeholder = '', name = null }) {
@@ -70,7 +70,7 @@ export function selectField(label, { value, options, onChange }) {
 }
 
 /**
- * 常用條件按鈕。順序依使用頻率自動重排（§5），同分維持設計順序。
+ * Quick condition buttons. Order is re-ranked by usage frequency (§5); ties keep the design order.
  * items: [{ id, label, active }]
  */
 export function chipRow(label, items, onPick, { rank = true, namespace = 'chip' } = {}) {

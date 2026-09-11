@@ -1,12 +1,12 @@
-// 計算引擎。純函數：(procedure) => (table, warnings)。每次變更全量重算，不做增量。
+// Calculation engine. Pure function: (procedure) => (table, warnings). Recomputed in full on every change, never incrementally.
 //
 //   n = m x purity / MW        m = n x MW / purity
-//   V = m / rho                純液體
-//   n = C x V                  溶液
+//   V = m / rho                neat liquid
+//   n = C x V                  solution
 //   equiv_i = n_i / n_basis
 //
-// 驅動欄位規則：每個化合物在每個步驟只有一個驅動欄位（amount.mode），
-// 其餘為推導值。不實作通用約束求解器。
+// Driving-field rule: each compound has exactly one driving field per step (amount.mode);
+// the rest are derived values. No general constraint solver.
 import { flattenSteps, numberSteps, compoundById } from '../model/schema.js'
 import { STEP_TYPES, MAX_BRANCH_DEPTH, ROLE_ORDER } from '../model/steps.js'
 import { concToSI, densityToSI, dimensionOf, gToKg, isNum, mwToSI, toSI } from '../model/units.js'
@@ -26,7 +26,7 @@ export function compute(doc) {
         level: WARN.warn,
         stepId: step.id,
         code: 'depth',
-        message: `分歧深度已達 ${depth} 層，建議改為另開一份程序。`,
+        message: `Branch depth has reached ${depth} levels; consider starting a separate procedure.`,
       })
     }
     const number = numbers.get(step.id)
@@ -39,7 +39,7 @@ export function compute(doc) {
     }
   }
 
-  // 預溶溶劑是附屬列；步驟本身仍對應主列
+  // The pre-dissolve solvent is an auxiliary row; the step itself still maps to the main row
   const byStep = new Map(rows.filter((row) => !row.part).map((row) => [row.stepId, row]))
   return {
     basis,
@@ -53,19 +53,19 @@ export function compute(doc) {
 }
 
 // ---------------------------------------------------------------------------
-// 基準
+// Basis
 // ---------------------------------------------------------------------------
 
 function resolveBasis(doc, warnings) {
   const empty = { compound: null, n: null, mass: null, volume: null, ok: false }
   const compound = compoundById(doc, doc.basis?.compoundId)
   if (!compound) {
-    warnings.push({ level: WARN.error, code: 'basis-missing', message: '尚未設定限量試劑與基準量，當量無法計算。' })
+    warnings.push({ level: WARN.error, code: 'basis-missing', message: 'No limiting reagent or basis amount set, so equivalents cannot be calculated.' })
     return empty
   }
   const { amount, unit } = doc.basis
   if (!isNum(amount) || amount <= 0) {
-    warnings.push({ level: WARN.error, code: 'basis-amount', message: `基準物 ${label(compound)} 尚未填入基準量。` })
+    warnings.push({ level: WARN.error, code: 'basis-amount', message: `Basis compound ${label(compound)} has no basis amount.` })
     return { ...empty, compound }
   }
 
@@ -92,21 +92,21 @@ function resolveBasis(doc, warnings) {
     warnings.push({
       level: WARN.error,
       code: 'basis-mol',
-      message: `無法由基準量推算 ${label(compound)} 的莫耳數，請補上${missingProp(props, unit)}。`,
+      message: `Cannot derive the moles of ${label(compound)} from the basis amount; add its ${missingProp(props, unit)}.`,
     })
   }
   return { compound, ...quantity, ok: isNum(quantity.n) && quantity.n > 0 }
 }
 
 // ---------------------------------------------------------------------------
-// 每步驟一列
+// One row per step
 // ---------------------------------------------------------------------------
 
 function buildRow({ doc, step, depth, branchLabel, number, basis, warnings }) {
   const meta = STEP_TYPES[step.type]
   const field = meta.compoundField
   const compound = field ? compoundById(doc, step[field]) : null
-  // 過濾的濾餅洗液按洗滌次數計量
+  // The filter cake rinse is quantified by the number of rinses
   const portions = step.type === 'filter' ? Math.max(1, Math.round(step.rinseCount ?? 1)) : 1
   const repeat = Math.max(1, Math.round(step.repeat ?? 1)) * portions
 
@@ -131,15 +131,15 @@ function buildRow({ doc, step, depth, branchLabel, number, basis, warnings }) {
     incomplete: [],
   }
 
-  if (step.freeform) return row // 取代型手動輸入不參與計量
+  if (step.freeform) return row // Freeform (replacing) entries are excluded from quantities
 
-  // 取樣間隔為必填（§3）
+  // The sampling interval is required (§3)
   if (step.type === 'monitor' && !isNum(step.interval)) {
     warnings.push({
       level: WARN.warn,
       stepId: step.id,
       code: 'monitor-interval',
-      message: `步驟 ${number}（取樣／追蹤）尚未填取樣間隔。`,
+      message: `Step ${number} (Monitor): the sampling interval is not set.`,
     })
   }
 
@@ -152,7 +152,7 @@ function buildRow({ doc, step, depth, branchLabel, number, basis, warnings }) {
         level: WARN.warn,
         stepId: step.id,
         code: 'compound-missing',
-        message: `步驟 ${number}（${meta.label}）尚未指定化合物。`,
+        message: `Step ${number} (${meta.label}): no compound selected.`,
       })
     }
     return row
@@ -169,7 +169,7 @@ function buildRow({ doc, step, depth, branchLabel, number, basis, warnings }) {
       level: WARN.warn,
       stepId: step.id,
       code: 'incomplete',
-      message: `步驟 ${number} ${label(compound)}：${quantity.missing.join('、')}。`,
+      message: `Step ${number} ${label(compound)}: ${quantity.missing.join('; ')}.`,
     })
   }
 
@@ -179,16 +179,16 @@ function buildRow({ doc, step, depth, branchLabel, number, basis, warnings }) {
   return row
 }
 
-/** 預溶溶劑：跟著加料一起進反應槽，另列一行計量並計入溶劑總量 */
+/** Pre-dissolve solvent: enters the vessel with the addition, gets its own row and counts toward total solvent */
 function dissolveRow({ doc, step, row, number, basis, warnings }) {
   if (step.type !== 'add' || !step.dissolve || step.freeform) return null
   const solvent = compoundById(doc, step.dissolve.solventId)
   if (!solvent) {
-    warnings.push({ level: WARN.warn, stepId: step.id, code: 'dissolve-solvent', message: `步驟 ${number}：尚未指定預溶溶劑。` })
+    warnings.push({ level: WARN.warn, stepId: step.id, code: 'dissolve-solvent', message: `Step ${number}: no pre-dissolve solvent selected.` })
     return null
   }
   if (!isNum(step.dissolve.volume)) {
-    warnings.push({ level: WARN.warn, stepId: step.id, code: 'dissolve-volume', message: `步驟 ${number}：尚未填預溶溶劑體積。` })
+    warnings.push({ level: WARN.warn, stepId: step.id, code: 'dissolve-volume', message: `Step ${number}: the pre-dissolve solvent volume is not set.` })
   }
   const quantity = quantify({ mode: 'volume', value: step.dissolve.volume }, properties(solvent), basis)
   const { n, mass, volume } = quantity.value
@@ -215,7 +215,7 @@ function dissolveRow({ doc, step, row, number, basis, warnings }) {
   }
 }
 
-/** 由驅動欄位推導其餘三欄 */
+/** Derive the other three columns from the driving field */
 function quantify(amount, props, basis) {
   const missing = []
   const value = { n: null, mass: null, volume: null }
@@ -237,7 +237,7 @@ function quantify(amount, props, basis) {
         value.mass = value.volume * props.density
         value.n = amountFromMass(value.mass, props, missing)
       } else {
-        missing.push('缺少密度或濃度，無法由體積推算質量')
+        missing.push('missing density or concentration, so mass cannot be derived from volume')
       }
       break
     }
@@ -245,7 +245,7 @@ function quantify(amount, props, basis) {
     case 'mol%': {
       const factor = amount.mode === 'equiv' ? amount.value : amount.value / 100
       if (!basis.ok) {
-        missing.push('基準量未定，當量無法換算')
+        missing.push('basis amount not set, so equivalents cannot be converted')
         break
       }
       value.n = factor * basis.n
@@ -255,7 +255,7 @@ function quantify(amount, props, basis) {
     }
     case 'vol_per_g': {
       if (!isNum(basis.mass)) {
-        missing.push('基準物質量未知，V/W 無法換算')
+        missing.push('basis mass unknown, so V/W cannot be converted')
         break
       }
       const grams = basis.mass * 1e3
@@ -274,8 +274,8 @@ function amountFromMass(mass, props, missing) {
   if (!isNum(mass)) return null
   if (props.conc && props.density) return props.conc * (mass / props.density)
   if (!props.mw) {
-    // 溶劑以體積計，沒有分子量不影響使用，不視為缺漏
-    if (props.role !== 'solvent') missing?.push('缺少分子量，無法推算莫耳數')
+    // Solvents are measured by volume; a missing MW doesn't matter for them and isn't flagged
+    if (props.role !== 'solvent') missing?.push('missing MW, so moles cannot be derived')
     return null
   }
   return (mass * props.purity) / props.mw
@@ -285,7 +285,7 @@ function massFromAmount(n, props, missing) {
   if (!isNum(n)) return null
   if (props.conc && props.density) return (n / props.conc) * props.density
   if (!props.mw) {
-    missing?.push('缺少分子量，無法推算質量')
+    missing?.push('missing MW, so mass cannot be derived')
     return null
   }
   return (n * props.mw) / props.purity
@@ -309,12 +309,12 @@ function properties(compound) {
 
 function missingProp(props, unit) {
   const dim = dimensionOf(unit)
-  if (dim === 'volume' && !props.density && !props.conc) return '密度或濃度'
-  return '分子量'
+  if (dim === 'volume' && !props.density && !props.conc) return 'density or concentration'
+  return 'molecular weight'
 }
 
 // ---------------------------------------------------------------------------
-// 匯總
+// Totals
 // ---------------------------------------------------------------------------
 
 function groupByRole(rows) {
@@ -327,7 +327,7 @@ function groupByRole(rows) {
   return [...groups.entries()].filter(([, list]) => list.length).map(([role, list]) => ({ role, rows: list }))
 }
 
-/** 溶劑總量：反應槽容積看主軸加入量，全程用量另計 */
+/** Total solvent: vessel sizing uses main-axis additions; whole-process usage is counted separately */
 function solventTotals(rows) {
   let reaction = 0
   let total = 0
@@ -345,7 +345,7 @@ function solventTotals(rows) {
   return { reaction: hasReaction ? reaction : null, total: hasTotal ? total : null }
 }
 
-/** 理論產量：以基準物莫耳數為上限；產物分子量選填於 meta.product */
+/** Theoretical yield: capped by the basis moles; the product MW is optional in meta.product */
 function theoreticalYield(doc, basis) {
   const product = doc.meta?.product ?? null
   const mw = mwToSI(product?.mw)
@@ -362,7 +362,7 @@ function scale(value, repeat) {
 }
 
 function label(compound) {
-  return compound?.name?.trim() || compound?.id || '化合物'
+  return compound?.name?.trim() || compound?.id || 'compound'
 }
 
 function pushOnce(list, item) {

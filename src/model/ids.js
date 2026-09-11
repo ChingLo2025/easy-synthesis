@@ -1,4 +1,4 @@
-// 短、可讀、在單份文件內唯一的識別碼。
+// Short, readable identifiers, unique within a single document.
 let counter = 0
 
 export function uid(prefix = 's') {
@@ -7,7 +7,7 @@ export function uid(prefix = 's') {
   return `${prefix}${stamp}${counter.toString(36)}`
 }
 
-/** 在既有集合中產生不衝突的 id，用於匯入或複製 */
+/** Generate an id that doesn't collide with an existing set, for import or duplication */
 export function uniqueId(prefix, taken) {
   let id = uid(prefix)
   while (taken.has(id)) id = uid(prefix)

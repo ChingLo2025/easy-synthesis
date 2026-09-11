@@ -1,6 +1,6 @@
-/* 設計基礎：三類色相、細框線、8px 圓角、無陰影、數字等寬。 */
+/* Design foundation: three family hues, thin borders, 8px radius, no shadows, tabular numbers. */
 :root {
-  /* 中性 */
+  /* Neutrals */
   --ink: #16181c;
   --ink-2: #4c545c;
   --ink-3: #7d858d;
@@ -12,7 +12,7 @@
   --surface-2: #f8f9fb;
   --surface-3: #eef0f3;
 
-  /* 三類色相：投入 / 轉化 / 分離。其餘近乎單色。 */
+  /* Three family hues: input / transform / separate. Everything else is near-monochrome. */
   --input: #2f62c4;
   --input-soft: #eaf1fd;
   --input-line: #c3d6f6;
@@ -70,7 +70,7 @@ h1, h2, h3, h4 {
   font-variant-numeric: tabular-nums;
 }
 
-/* 圖示：網格 24，實際線寬固定 1.5px，不隨縮放變粗 */
+/* Icons: 24 grid, actual stroke fixed at 1.5px, doesn't thicken when scaled */
 .icon {
   display: block;
   flex: none;
@@ -84,7 +84,7 @@ h1, h2, h3, h4 {
   vector-effect: non-scaling-stroke;
 }
 
-/* ── 控制元件 ─────────────────────────────────────────────────────────── */
+/* ── Controls ─────────────────────────────────────────────────────────── */
 button {
   font: inherit;
   color: inherit;
@@ -124,7 +124,7 @@ button {
 .btn--icon { width: 30px; padding: 0; justify-content: center; }
 .btn .icon { width: 16px; height: 16px; }
 
-/* 常用條件按鈕：按下即填入 */
+/* Quick condition buttons: click to fill in */
 .chip {
   display: inline-flex;
   align-items: center;

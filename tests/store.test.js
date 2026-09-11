@@ -9,7 +9,7 @@ function newStore() {
   return createStore(doc)
 }
 
-test('結構性變動各成一筆歷史', () => {
+test('structural changes are each their own history entry', () => {
   const store = newStore()
   store.transact((doc) => doc.steps.push(createStep('add')), { structural: true })
   store.transact((doc) => doc.steps.push(createStep('wash')), { structural: true })
@@ -21,7 +21,7 @@ test('結構性變動各成一筆歷史', () => {
   assert.equal(store.getState().canUndo, false)
 })
 
-test('同一欄位的連續修改合併為一筆', () => {
+test('consecutive edits to the same field merge into one entry', () => {
   const store = newStore()
   const id = store.getState().doc.steps[0].id
   for (const temp of [21, 22, 23]) {
@@ -32,14 +32,14 @@ test('同一欄位的連續修改合併為一筆', () => {
   assert.equal(store.getState().doc.steps[0].temp, 20)
 })
 
-test('切換欄位即分筆', () => {
+test('switching fields starts a new entry', () => {
   const store = newStore()
   store.transact((doc) => { doc.steps[0].temp = 30 }, { key: 'a:temp' })
   store.transact((doc) => { doc.steps[0].time = 15 }, { key: 'a:time' })
   assert.equal(store.historyDepth.past, 2)
 })
 
-test('flush 之後同 key 也不再合併', () => {
+test('after a flush the same key no longer merges', () => {
   const store = newStore()
   store.transact((doc) => { doc.steps[0].temp = 30 }, { key: 'a:temp' })
   store.flush()
@@ -47,7 +47,7 @@ test('flush 之後同 key 也不再合併', () => {
   assert.equal(store.historyDepth.past, 2)
 })
 
-test('重做在新的變更後被清空', () => {
+test('redo is cleared by a new change', () => {
   const store = newStore()
   store.transact((doc) => doc.steps.push(createStep('add')), { structural: true })
   store.undo()
@@ -56,7 +56,7 @@ test('重做在新的變更後被清空', () => {
   assert.equal(store.getState().canRedo, false)
 })
 
-test('復原後回報變動的步驟，供閃爍高亮', () => {
+test('undo reports the changed steps for flash highlighting', () => {
   const store = newStore()
   const id = store.getState().doc.steps[0].id
   store.transact((doc) => { doc.steps[0].temp = 80 }, { structural: true })
@@ -64,7 +64,7 @@ test('復原後回報變動的步驟，供閃爍高亮', () => {
   assert.deepEqual(store.getState().flash, [id])
 })
 
-test('歷史深度上限保留最近的變更', () => {
+test('the history depth limit keeps the most recent changes', () => {
   const store = newStore()
   for (let i = 0; i < HISTORY_LIMIT + 20; i += 1) {
     store.transact((doc) => { doc.steps[0].temp = i }, { structural: true })
@@ -73,7 +73,7 @@ test('歷史深度上限保留最近的變更', () => {
   assert.equal(store.getState().doc.steps[0].temp, HISTORY_LIMIT + 19)
 })
 
-test('載入範本時重置歷史，不疊加', () => {
+test('loading a template resets history instead of stacking', () => {
   const store = newStore()
   store.transact((doc) => doc.steps.push(createStep('add')), { structural: true })
   store.replace(createDocument(), { resetHistory: true })
@@ -81,7 +81,7 @@ test('載入範本時重置歷史，不疊加', () => {
   assert.equal(store.getState().canRedo, false)
 })
 
-test('快照包含選取與捲動位置', () => {
+test('snapshots include selection and scroll position', () => {
   const store = newStore()
   store.setUI({ selectedId: 'x', scrollTop: 120 })
   store.transact((doc) => doc.steps.push(createStep('add')), { structural: true })
@@ -91,13 +91,13 @@ test('快照包含選取與捲動位置', () => {
   assert.equal(store.getState().ui.scrollTop, 120)
 })
 
-test('介面狀態不進入歷史', () => {
+test('UI state does not enter history', () => {
   const store = newStore()
   store.setUI({ selectedId: 'a' })
   assert.equal(store.getState().canUndo, false)
 })
 
-test('重繪期間的 flush（Chrome 移除有焦點欄位時送出的 blur）不打斷同欄位合併', () => {
+test('a flush during re-render (blur when Chrome removes a focused field) does not break same-field coalescing', () => {
   const store = newStore()
   store.transact((doc) => { doc.steps[0].temp = 21 }, { key: 'a:temp' })
   store.holdFlush(() => store.flush())
@@ -105,7 +105,7 @@ test('重繪期間的 flush（Chrome 移除有焦點欄位時送出的 blur）�
   assert.equal(store.historyDepth.past, 1)
 })
 
-test('重繪以外的 flush（真的離開欄位）照常提交', () => {
+test('a flush outside re-render (really leaving the field) commits as usual', () => {
   const store = newStore()
   store.transact((doc) => { doc.steps[0].temp = 21 }, { key: 'a:temp' })
   store.holdFlush(() => {})

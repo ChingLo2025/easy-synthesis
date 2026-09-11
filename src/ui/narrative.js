@@ -1,9 +1,9 @@
-// Experimental section：由結構化資料套模板生成敘述文字，中英文各一份。
+// Experimental section: narrative text generated from structured data via templates, one Chinese and one English.
 //
-// 留白規則（逐步驟，不停用整份文件）
-//   純模板步驟：中英文皆正常生成
-//   有 note   ：中文生成後原樣附加該句，英文留白
-//   有 freeform：中英文皆留白
+// Blank rules (per step; never disables the whole document)
+//   Pure template step: both Chinese and English are generated normally
+//   With a note       : Chinese is generated with the note appended verbatim; English is left blank
+//   With freeform     : both Chinese and English are left blank
 import { numberSteps, flattenSteps } from '../model/schema.js'
 import { ATMOSPHERES, DRY_METHODS, EVAPORATE_METHODS, FILTER_METHODS, MONITOR_METHODS, PHASES, RAMPS, STIR_SPECIALS } from '../model/steps.js'
 import { speedText } from './summary.js'
@@ -25,7 +25,7 @@ export function generateNarrative(doc, metrics) {
       stepId: first.id,
       number: numbers.get(first.id),
       branchLabel: first.branchLabel ?? null,
-      zh: blankZh ? null : segmentZh(segment, rowOf, doc),
+      zh: blankZh ? null : spaceZh(segmentZh(segment, rowOf, doc)),
       en: blankEn ? null : segmentEn(segment, rowOf, doc),
       note: first.note?.trim() ?? '',
       joinPrev: canJoinPrevious(first),
@@ -43,7 +43,7 @@ export function generateNarrative(doc, metrics) {
   }
 }
 
-/** 連續、單純的加料步驟併為一段，敘述才不會變成「加入 A，加入 B」 */
+/** Consecutive simple additions merge into one clause, so the narrative doesn't read "add A, add B" */
 function groupSegments(entries) {
   const segments = []
   let run = null
@@ -63,7 +63,7 @@ function groupSegments(entries) {
   return segments
 }
 
-/** 產生段落。留白標記自成一句，前後不合併。 */
+/** Build paragraphs. Blank markers form their own sentence and never merge with neighbours. */
 function assemble(units, lang) {
   const sentences = []
   let current = []
@@ -76,7 +76,7 @@ function assemble(units, lang) {
   }
 
   for (const unit of units) {
-    // 支流自成段落，回到主軸時同樣斷句
+    // Branches form their own paragraph; the sentence also breaks when returning to the main axis
     const switched = (unit.branchLabel ?? null) !== branch
     if (switched) flush()
 
@@ -108,7 +108,7 @@ function assemble(units, lang) {
   return sentences
 }
 
-/** 英文列舉用牛津逗號：a, b, and c */
+/** English lists use the Oxford comma: a, b, and c */
 function joinEnClauses(clauses) {
   if (clauses.length === 1) return clauses[0]
   if (clauses.length === 2) return `${clauses[0]}, and ${clauses[1]}`
@@ -133,7 +133,18 @@ function capitalize(text) {
   return text.charAt(0).toUpperCase() + text.slice(1)
 }
 
-// ── 中文 ───────────────────────────────────────────────────────────────────
+/**
+ * Chinese/Latin spacing on generated clauses: a half-width space at every boundary between a
+ * CJK character and a Latin letter or digit (e.g. "MgSO4 (anhydrous) 乾燥", "直至 starting material").
+ * sp() only covers text that starts with Latin; English names followed by Chinese need this too.
+ */
+function spaceZh(text) {
+  return text
+    .replace(/([A-Za-z0-9)])(?=[一-鿿])/g, '$1 ')
+    .replace(/([一-鿿])(?=[A-Za-z0-9(])/g, '$1 ')
+}
+
+// ── Chinese ───────────────────────────────────────────────────────────────────
 function segmentZh(segment, rowOf, doc) {
   if (segment.length > 1) {
     const vessel = segment.find((step) => step.vessel)?.vessel
@@ -148,7 +159,7 @@ function clauseZh(step, row, doc) {
     case 'add': {
       const name = compoundName(row, 'zh')
       const detail = quantityParen(step, row)
-      // 預溶：將 X 溶於 THF (20 mL) 後加入／緩慢滴入
+      // Pre-dissolve (zh): dissolve X in THF (20 mL), then add it or add it dropwise
       const lead = step.dissolve ? `將${sp(name)}${detail} 溶於${sp(dissolveName(row, 'zh'))}${volumeParen(row?.dissolve)} 後` : ''
       if (step.addMode === 'dropwise') {
         const bits = [lead ? `${lead}緩慢滴入` : `緩慢滴入${sp(name)}${detail}`]
@@ -168,7 +179,7 @@ function clauseZh(step, row, doc) {
       return `${main}${extra}`
     }
     case 'extract': {
-      const kept = PHASES[step.phaseKept]?.label ?? '有機層'
+      const kept = PHASES[step.phaseKept]?.zh ?? '有機層'
       return `以${sp(compoundName(row, 'zh'))}${volumeParen(row)} 萃取${countZh(step.repeat)}，合併${kept}`
     }
     case 'wash':
@@ -177,14 +188,14 @@ function clauseZh(step, row, doc) {
       const conditions = []
       if (isNum(step.temp)) conditions.push(`${sig(step.temp)} °C`)
       if (isNum(step.pressure)) conditions.push(`${sig(step.pressure)} mbar`)
-      // 時間選填；至乾另外勾選
+      // Time is optional; to-dryness is a separate toggle
       if (isNum(step.time)) conditions.push(formatDuration(step.time))
       const suffix = conditions.length ? `（${conditions.join('，')}）` : ''
-      return `以${EVAPORATE_METHODS[step.method]?.label ?? '濃縮'}${suffix}移除溶劑${step.toDryness ? '至乾' : ''}`
+      return `以${EVAPORATE_METHODS[step.method]?.zh ?? '濃縮'}${suffix}移除溶劑${step.toDryness ? '至乾' : ''}`
     }
     case 'dry': {
       if (step.method === 'agent') return `以${sp(compoundName(row, 'zh'))}乾燥後過濾`
-      const bits = [`於${DRY_METHODS[step.method]?.label ?? '乾燥'}`]
+      const bits = [`於${DRY_METHODS[step.method]?.zh ?? '乾燥'}`]
       if (isNum(step.temp)) bits.push(` ${sig(step.temp)} °C`)
       bits.push(' 乾燥')
       if (isNum(step.time)) bits.push(` ${formatDuration(step.time)}`)
@@ -215,7 +226,7 @@ function clauseZh(step, row, doc) {
   }
 }
 
-// ── 英文 ───────────────────────────────────────────────────────────────────
+// ── English ───────────────────────────────────────────────────────────────────
 function segmentEn(segment, rowOf, doc) {
   if (segment.length > 1) {
     const vessel = segment.find((step) => step.vessel)?.vessel
@@ -231,7 +242,7 @@ function clauseEn(step, row, doc) {
     case 'add': {
       const name = compoundName(row, 'en')
       const detail = quantityParen(step, row, 'en')
-      // 預溶：a solution of X in THF (20 mL)
+      // Pre-dissolve: a solution of X in THF (20 mL)
       const subject = step.dissolve
         ? `a solution of ${name}${detail} in ${dissolveName(row, 'en')}${volumeParen(row?.dissolve)}`
         : `${name}${detail}`
@@ -303,8 +314,8 @@ function clauseEn(step, row, doc) {
   }
 }
 
-// ── 共用零件 ───────────────────────────────────────────────────────────────
-/** 中英混排：以拉丁字母或數字開頭時補一個半形空格 */
+// ── Shared parts ───────────────────────────────────────────────────────────────
+/** Mixed CJK/Latin text: prepend a half-width space when the text starts with a Latin letter or digit */
 function sp(text) {
   return /^[A-Za-z0-9(]/.test(String(text ?? '')) ? ` ${text}` : String(text ?? '')
 }
@@ -316,7 +327,7 @@ function compoundName(row, lang) {
   return compound.name || '（未命名）'
 }
 
-/** 反應物：(10.0 g, 50.7 mmol, 1.0 eq)；溶劑：(50 mL) */
+/** Reactants: (10.0 g, 50.7 mmol, 1.0 eq); solvents: (50 mL) */
 function quantityParen(step, row, lang = 'zh') {
   if (!row) return ''
   const bits = []
@@ -358,21 +369,21 @@ function joinEn(items) {
   return `${items.slice(0, -1).join(', ')} and ${items[items.length - 1]}`
 }
 
-/** 緩慢升降溫：於 N₂ 下緩慢升溫至 80 °C（2 °C/min），攪拌 2 小時 */
+/** Slow ramp (zh): slowly heated to 80 °C under N₂ (2 °C/min), then stirred for 2 h */
 function rampZh(step) {
   const { lead, extra } = stirConditionsZh(step)
   const reflux = (step.special ?? []).includes('reflux') && step.ramp === 'up'
   const target = isNum(step.temp) ? `至 ${sig(step.temp)} °C` : reflux ? '至迴流' : ''
   const rate = isNum(step.rampRate) ? `（${sig(step.rampRate)} °C/min）` : ''
   const tail = ['攪拌', isNum(step.time) ? formatDuration(step.time) : null].filter(Boolean).join(' ')
-  return `${lead.join(' ')}${RAMPS[step.ramp].label}${target}${rate}，${tail}${extra}`
+  return `${lead.join(' ')}${RAMPS[step.ramp].zh}${target}${rate}，${tail}${extra}`
 }
 
-/** 攪拌條件：氣氛、封管、避光放在動詞前；減壓、超音波、轉速放在括號補充 */
+/** Stir conditions: atmosphere, sealed tube and darkness go before the verb; vacuum, sonication and rpm go in a trailing parenthesis */
 function stirConditionsZh(step) {
   const has = (id) => (step.special ?? []).includes(id)
   const lead = [
-    step.atm && step.atm !== 'air' ? `於 ${ATMOSPHERES[step.atm].label} 下` : null,
+    step.atm && step.atm !== 'air' ? `於 ${ATMOSPHERES[step.atm].zh} 下` : null,
     has('sealed') ? '於封管中' : null,
     has('dark') ? '避光' : null,
   ].filter(Boolean)
@@ -401,7 +412,7 @@ function dissolveName(row, lang) {
   return compoundName(row?.dissolve ?? null, lang)
 }
 
-/** 過濾的濾餅洗滌次數 */
+/** Number of filter cake rinses */
 function rinseCount(step) {
   return Math.max(1, Math.round(step.rinseCount ?? 1))
 }
@@ -410,7 +421,7 @@ function repeatEn(step) {
   return step.repeat > 1 ? ` (${step.repeat} times)` : ''
 }
 
-/** 純文字複製：待補歸零前仍保留方括號標記，避免帶洞的文件被直接送出 */
+/** Plain-text copy: bracket markers stay until nothing is pending, so a document with holes isn't sent out as is */
 export function narrativeToText(sentences, lang = 'zh') {
   return sentences.join(lang === 'zh' ? '' : ' ')
 }

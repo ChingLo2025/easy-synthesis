@@ -1,9 +1,9 @@
-// 使用習慣：按鈕順序依使用頻率自動重排；同型別、同化合物的欄位帶入上次使用值。
+// Usage habits: buttons re-rank by usage frequency; fields of the same type and compound default to the last-used value.
 import { KEYS, load, save, throttledSave } from './persist.js'
 
 let frequency = null
 let lastUsed = null
-// 逐字輸入時也會呼叫；寫入 localStorage 延後到停頓之後
+// Also called while typing char by char; the localStorage write is deferred until a pause
 const saveLastUsed = throttledSave(KEYS.lastUsed)
 
 function freq() {
@@ -16,7 +16,7 @@ function recent() {
   return lastUsed
 }
 
-/** 記錄一次點擊 */
+/** Record one click */
 export function bumpUsage(id) {
   const table = freq()
   table[id] = (table[id] ?? 0) + 1
@@ -28,8 +28,8 @@ export function usageCount(id) {
 }
 
 /**
- * 依使用頻率重排，同分維持原始順序（穩定排序）。
- * 未使用過的按鈕保持設計順序，避免介面在初次使用時亂跳。
+ * Re-rank by usage frequency; ties keep the original order (stable sort).
+ * Unused buttons keep the design order so the interface doesn't jump around on first use.
  */
 export function rankByUsage(items, keyOf = (item) => item.id) {
   return items
@@ -42,21 +42,21 @@ function defaultsKey(type, compoundId) {
   return compoundId ? `${type}:${compoundId}` : type
 }
 
-/** 記住某型別（或某型別＋化合物）最後使用的欄位值 */
+/** Remember the last-used field values for a type (or type + compound) */
 export function rememberDefaults(type, compoundId, fields) {
   const table = recent()
-  // 存複本：之後改動文件裡的步驟（例如刪除化合物）不會連帶改到記住的值
+  // Store a copy: later changes to steps in the document (e.g. deleting a compound) won't alter the remembered values
   table[defaultsKey(type, compoundId)] = { ...(table[defaultsKey(type, compoundId)] ?? {}), ...structuredClone(fields) }
   saveLastUsed(table)
 }
 
-/** 取回預設值：化合物專屬優先，其次型別通用 */
+/** Recall defaults: compound-specific first, then type-wide */
 export function recallDefaults(type, compoundId) {
   const table = recent()
   return structuredClone({ ...(table[type] ?? {}), ...(compoundId ? (table[defaultsKey(type, compoundId)] ?? {}) : {}) })
 }
 
-/** 測試用：清空快取，強制重讀 */
+/** For tests: clear the cache and force a re-read */
 export function resetPrefsCache() {
   frequency = null
   lastUsed = null

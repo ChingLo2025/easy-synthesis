@@ -1,7 +1,7 @@
-/* 流程圖：中軸線。主物流沿中央垂直軸由上而下，
-   加入的物質從左側帶箭頭進入，移除的物質從右側離開。 */
+/* Flow diagram: central axis. The main stream runs top to bottom along the central vertical axis;
+   added materials enter from the left with arrows, and removed materials leave to the right. */
 .flow { display: flex; flex-direction: column; align-items: stretch; }
-/* 極窄視窗的安全閥：圖自己捲，不撐破頁面 */
+/* Safety valve for very narrow windows: the diagram scrolls itself instead of breaking the page */
 @media screen { .flow { overflow-x: auto; } }
 
 .flow__branch-row {
@@ -52,7 +52,7 @@
   font-variant-numeric: tabular-nums;
 }
 
-/* 側向支流 */
+/* Side streams */
 .flow__side { display: flex; align-items: center; gap: 6px; min-width: 0; }
 .flow__side--in { justify-content: flex-end; text-align: right; }
 .flow__side--out { justify-content: flex-start; }
@@ -77,13 +77,13 @@
 .flow__arrow path { stroke-width: 1.5px; vector-effect: non-scaling-stroke; fill: none; stroke: currentColor; stroke-linecap: round; stroke-linejoin: round; }
 .flow__arrow polygon { fill: currentColor; }
 
-/* 中軸連接線 */
+/* Central connector line */
 .flow__link { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); }
 .flow__link svg { grid-column: 2; justify-self: center; color: var(--line-strong); display: block; }
 .flow__link path { stroke: currentColor; stroke-width: 1.5px; vector-effect: non-scaling-stroke; fill: none; }
 .flow__link polygon { fill: currentColor; }
 
-/* 分支：右側出口接續的子軸，向右縮排，遞迴渲染 */
+/* Branch: a sub-axis continuing from the right exit, indented to the right, rendered recursively */
 .flow__branch {
   justify-self: start;
   min-width: 0;

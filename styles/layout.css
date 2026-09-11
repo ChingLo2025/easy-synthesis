@@ -1,4 +1,4 @@
-/* 應用外框：三欄工作區。文件本身（流程圖 + 計量表 + 頁尾）在右欄。 */
+/* App shell: three-column workspace. The document itself (flow + table + footer) is in the right column. */
 .app {
   display: flex;
   flex-direction: column;
@@ -6,7 +6,7 @@
   min-height: 0;
 }
 
-/* ── 頂列 ─────────────────────────────────────────────────────────────── */
+/* ── Top bar ─────────────────────────────────────────────────────────────── */
 .topbar {
   display: flex;
   align-items: center;
@@ -53,7 +53,7 @@
 .meta-input--title { font-weight: 600; font-size: 15px; max-width: 280px; min-width: 140px; }
 .meta-input--sm { max-width: 120px; font-size: 13px; color: var(--ink-2); }
 
-/* ── 工作區 ───────────────────────────────────────────────────────────── */
+/* ── Workspace ───────────────────────────────────────────────────────────── */
 .workspace {
   display: grid;
   grid-template-columns: 216px minmax(320px, 1fr) minmax(420px, 1.15fr);
@@ -95,7 +95,7 @@
 .panel__body { flex: 1; min-height: 0; overflow: auto; padding: 12px; }
 .panel--document .panel__body { padding: 20px; }
 
-/* ── 左側模組面板 ─────────────────────────────────────────────────────── */
+/* ── Left module panel ─────────────────────────────────────────────────────── */
 .palette__group { padding: 10px 10px 4px; }
 .palette__title {
   font-size: 11px;
@@ -139,7 +139,7 @@
 .module[data-family="transform"] .module__icon { color: var(--transform); background: var(--transform-soft); border-color: var(--transform-line); }
 .module[data-family="separate"] .module__icon { color: var(--separate); background: var(--separate-soft); border-color: var(--separate-line); }
 
-/* ── 分頁 ─────────────────────────────────────────────────────────────── */
+/* ── Tabs ─────────────────────────────────────────────────────────────── */
 .tabs { display: flex; gap: 2px; }
 .tab {
   display: inline-flex;
@@ -155,7 +155,7 @@
 .tab[aria-selected="true"] { background: var(--accent-soft); color: var(--accent); font-weight: 500; }
 .tab .icon { width: 15px; height: 15px; }
 
-/* ── 狀態列 ───────────────────────────────────────────────────────────── */
+/* ── Status bar ───────────────────────────────────────────────────────────── */
 .statusbar {
   display: flex;
   align-items: center;

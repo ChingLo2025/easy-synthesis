@@ -1,4 +1,4 @@
-// 每個步驟型別的欄位編輯器。所有型別皆可切換為 freeform 手動輸入（由卡片外殼處理）。
+// Field editors for each step type. Every type can switch to freeform manual entry (handled by the card shell).
 import { el } from './dom.js'
 import { compoundPicker } from './picker.js'
 import { chipRow, field, numberField, onTextInput, row, selectField, textField } from './fields.js'
@@ -17,50 +17,50 @@ export function renderEditor(step, ctx) {
   return build ? build(step, { ...ctx, step }) : []
 }
 
-// ── 加入物質 ───────────────────────────────────────────────────────────────
+// ── Add ───────────────────────────────────────────────────────────────
 function addEditor(step, ctx) {
   const { doc, actions, store, row: metrics } = ctx
   const compound = doc.compounds.find((c) => c.id === step.compoundId) ?? null
   const parts = [
     row([
-      field('化合物', compoundPicker({
+      field('Compound', compoundPicker({
         doc,
         value: step.compoundId,
         onPick: (choice) => pickCompound(ctx, step.id, 'compoundId', choice),
       })),
-      field('容器', el('input', {
+      field('Vessel', el('input', {
         type: 'text',
         name: 'vessel',
         value: step.vessel ?? '',
-        placeholder: '250 mL 圓底燒瓶',
+        placeholder: '250 mL round-bottom flask',
         ...onTextInput((vessel) => actions.updateStep(step.id, { vessel }, { key: 'vessel' })),
         onblur: () => store.flush(),
       })),
     ]),
     amountBlock(step, ctx, compound),
-    chipRow('加法', [
-      { id: 'once', label: '一次加入', active: step.addMode === 'once' },
-      { id: 'dropwise', label: '滴加', active: step.addMode === 'dropwise' },
+    chipRow('Mode', [
+      { id: 'once', label: 'All at once', active: step.addMode === 'once' },
+      { id: 'dropwise', label: 'Dropwise', active: step.addMode === 'dropwise' },
     ], (item) => actions.updateStep(step.id, { addMode: item.id }), { namespace: 'addMode' }),
-    chipRow('預溶', [
-      { id: 'dissolve', label: '先溶於溶劑再加入', active: Boolean(step.dissolve) },
+    chipRow('Pre-dissolve', [
+      { id: 'dissolve', label: 'Dissolve in solvent first', active: Boolean(step.dissolve) },
     ], () => actions.updateDissolve(step.id, step.dissolve ? null : {}), { rank: false, namespace: 'dissolve' }),
   ]
   if (step.dissolve) parts.push(dissolveFields(step, ctx))
 
   if (step.addMode === 'dropwise') {
     parts.push(row([
-      numberField('滴加時間', {
+      numberField('Addition time', {
         name: 'duration', value: step.duration, suffix: 'min',
         onInput: (value) => actions.updateStep(step.id, { duration: value }, { key: 'duration' }),
         onBlur: () => store.flush(),
       }),
-      numberField('速率', {
+      numberField('Rate', {
         name: 'rate', value: step.rate, suffix: 'mL/min',
         onInput: (value) => actions.updateStep(step.id, { rate: value }, { key: 'rate' }),
         onBlur: () => store.flush(),
       }),
-      numberField('溫控上限', {
+      numberField('Max temp', {
         name: 'tempMax', value: step.tempMax, suffix: '°C',
         onInput: (value) => actions.updateStep(step.id, { tempMax: value }, { key: 'tempMax' }),
         onBlur: () => store.flush(),
@@ -72,48 +72,48 @@ function addEditor(step, ctx) {
   return parts
 }
 
-// ── 攪拌 ───────────────────────────────────────────────────────────────────
+// ── Stir ───────────────────────────────────────────────────────────────────
 function stirEditor(step, ctx) {
   const { actions, store } = ctx
   const specials = step.special ?? []
   return [
     row([
-      numberField(step.ramp ? '目標溫度' : '溫度', {
+      numberField(step.ramp ? 'Target temp' : 'Temp', {
         name: 'temp', value: step.temp, suffix: '°C',
         onInput: (value) => actions.updateStep(step.id, { temp: value }, { key: 'temp' }),
         onBlur: () => store.flush(),
       }),
-      numberField('時間', {
+      numberField('Time', {
         name: 'time', value: step.time, suffix: 'min',
         onInput: (value) => actions.updateStep(step.id, { time: value }, { key: 'time' }),
         onBlur: () => store.flush(),
       }),
-      numberField('轉速', {
+      numberField('Stir rate', {
         name: 'rpm', value: step.rpm, suffix: 'rpm',
         onInput: (value) => actions.updateStep(step.id, { rpm: value }, { key: 'rpm' }),
         onBlur: () => store.flush(),
       }),
     ], { tight: true }),
-    chipRow('氣氛', Object.entries(ATMOSPHERES).map(([id, meta]) => ({
+    chipRow('Atmosphere', Object.entries(ATMOSPHERES).map(([id, meta]) => ({
       id, label: meta.label, active: step.atm === id,
     })), (item) => actions.updateStep(step.id, { atm: item.id }), { namespace: 'atm' }),
-    chipRow('溫度', TEMP_PRESETS.map((value) => ({
+    chipRow('Temp', TEMP_PRESETS.map((value) => ({
       id: `t${value}`, label: `${value} °C`, value, active: step.temp === value,
     })), (item) => actions.updateStep(step.id, { temp: item.value }), { namespace: 'temp' }),
-    chipRow('升降溫', Object.entries(RAMPS).map(([id, meta]) => ({
+    chipRow('Ramp', Object.entries(RAMPS).map(([id, meta]) => ({
       id, label: meta.label, active: step.ramp === id,
     })), (item) => actions.updateStep(step.id, { ramp: step.ramp === item.id ? null : item.id }), { rank: false, namespace: 'ramp' }),
     step.ramp ? row([
       numberField(RAMPS[step.ramp].rateLabel, {
-        name: 'rampRate', value: step.rampRate, suffix: '°C/min', placeholder: '選填',
+        name: 'rampRate', value: step.rampRate, suffix: '°C/min', placeholder: 'Optional',
         onInput: (value) => actions.updateStep(step.id, { rampRate: value }, { key: 'rampRate' }),
         onBlur: () => store.flush(),
       }),
     ], { tight: true }) : null,
-    chipRow('時間', TIME_PRESETS.map((value) => ({
+    chipRow('Time', TIME_PRESETS.map((value) => ({
       id: `m${value}`, label: labelMinutes(value), value, active: step.time === value,
     })), (item) => actions.updateStep(step.id, { time: item.value }), { namespace: 'time' }),
-    chipRow('條件', Object.entries(STIR_SPECIALS).map(([id, meta]) => ({
+    chipRow('Conditions', Object.entries(STIR_SPECIALS).map(([id, meta]) => ({
       id, label: meta.label, active: specials.includes(id),
     })), (item) => {
       const next = specials.includes(item.id) ? specials.filter((s) => s !== item.id) : [...specials, item.id]
@@ -122,17 +122,17 @@ function stirEditor(step, ctx) {
   ].filter(Boolean)
 }
 
-// ── 萃取 / 水洗 ────────────────────────────────────────────────────────────
+// ── Extract / Wash ────────────────────────────────────────────────────────────
 function extractEditor(step, ctx) {
   const { doc, actions, row: metrics } = ctx
   const compound = doc.compounds.find((c) => c.id === step.solventId) ?? null
   return [
     row([
-      field('溶劑', compoundPicker({
-        doc, value: step.solventId, filter: 'solvent', placeholder: '選擇溶劑',
+      field('Solvent', compoundPicker({
+        doc, value: step.solventId, filter: 'solvent', placeholder: 'Select solvent',
         onPick: (choice) => pickCompound(ctx, step.id, 'solventId', choice),
       })),
-      selectField('保留相', {
+      selectField('Keep phase', {
         value: step.phaseKept,
         options: Object.entries(PHASES).map(([id, meta]) => [id, meta.label]),
         onChange: (value) => actions.updateStep(step.id, { phaseKept: value }),
@@ -147,8 +147,8 @@ function washEditor(step, ctx) {
   const { doc, row: metrics } = ctx
   const compound = doc.compounds.find((c) => c.id === step.solventId) ?? null
   return [
-    field('洗液', compoundPicker({
-      doc, value: step.solventId, filter: 'solvent', placeholder: '選擇洗液',
+    field('Wash solution', compoundPicker({
+      doc, value: step.solventId, filter: 'solvent', placeholder: 'Select wash solution',
       onPick: (choice) => pickCompound(ctx, step.id, 'solventId', choice),
     })),
     amountBlock(step, ctx, compound),
@@ -156,57 +156,57 @@ function washEditor(step, ctx) {
   ]
 }
 
-// ── 濃縮 ───────────────────────────────────────────────────────────────────
+// ── Concentrate ───────────────────────────────────────────────────────────────────
 function evaporateEditor(step, ctx) {
   const { actions, store } = ctx
   return [
-    chipRow('方式', Object.entries(EVAPORATE_METHODS).map(([id, meta]) => ({
+    chipRow('Method', Object.entries(EVAPORATE_METHODS).map(([id, meta]) => ({
       id, label: meta.label, active: step.method === id,
     })), (item) => actions.updateStep(step.id, { method: item.id }), { namespace: 'evapMethod' }),
     row([
-      numberField('水浴溫度', {
+      numberField('Bath temp', {
         name: 'temp', value: step.temp, suffix: '°C',
         onInput: (value) => actions.updateStep(step.id, { temp: value }, { key: 'temp' }),
         onBlur: () => store.flush(),
       }),
-      numberField('壓力', {
+      numberField('Pressure', {
         name: 'pressure', value: step.pressure, suffix: 'mbar',
         onInput: (value) => actions.updateStep(step.id, { pressure: value }, { key: 'pressure' }),
         onBlur: () => store.flush(),
       }),
-      numberField('時間', {
-        name: 'time', value: step.time, suffix: 'min', placeholder: '選填',
+      numberField('Time', {
+        name: 'time', value: step.time, suffix: 'min', placeholder: 'Optional',
         onInput: (value) => actions.updateStep(step.id, { time: value }, { key: 'time' }),
         onBlur: () => store.flush(),
       }),
     ], { tight: true }),
-    chipRow('終點', [
-      { id: 'dry', label: '抽至乾', active: Boolean(step.toDryness) },
+    chipRow('End point', [
+      { id: 'dry', label: 'To dryness', active: Boolean(step.toDryness) },
     ], () => actions.updateStep(step.id, { toDryness: !step.toDryness }), { rank: false, namespace: 'toDryness' }),
   ]
 }
 
-// ── 乾燥 ───────────────────────────────────────────────────────────────────
+// ── Dry ───────────────────────────────────────────────────────────────────
 function dryEditor(step, ctx) {
   const { doc, actions, store } = ctx
   const parts = [
-    chipRow('方式', Object.entries(DRY_METHODS).map(([id, meta]) => ({
+    chipRow('Method', Object.entries(DRY_METHODS).map(([id, meta]) => ({
       id, label: meta.label, active: step.method === id,
     })), (item) => actions.updateStep(step.id, { method: item.id }), { namespace: 'dryMethod' }),
   ]
   if (step.method === 'agent') {
-    parts.push(field('乾燥劑', compoundPicker({
+    parts.push(field('Drying agent', compoundPicker({
       doc, value: step.agentId, filter: 'drying', placeholder: 'MgSO4 / Na2SO4…',
       onPick: (choice) => pickCompound(ctx, step.id, 'agentId', choice),
     })))
   }
   parts.push(row([
-    numberField('溫度', {
+    numberField('Temp', {
       name: 'temp', value: step.temp, suffix: '°C',
       onInput: (value) => actions.updateStep(step.id, { temp: value }, { key: 'temp' }),
       onBlur: () => store.flush(),
     }),
-    numberField('時間', {
+    numberField('Time', {
       name: 'time', value: step.time, suffix: 'min',
       onInput: (value) => actions.updateStep(step.id, { time: value }, { key: 'time' }),
       onBlur: () => store.flush(),
@@ -215,11 +215,11 @@ function dryEditor(step, ctx) {
   return parts
 }
 
-// ── 取樣 / 追蹤 ────────────────────────────────────────────────────────────
+// ── Monitor ────────────────────────────────────────────────────────────
 function monitorEditor(step, ctx) {
   const { actions, store } = ctx
   const missingInterval = step.interval === null || step.interval === undefined
-  const intervalField = numberField('取樣間隔（必填）', {
+  const intervalField = numberField('Interval (required)', {
     name: 'interval', value: step.interval, suffix: 'min',
     onInput: (value) => actions.updateStep(step.id, { interval: value }, { key: 'interval' }),
     onBlur: () => store.flush(),
@@ -227,15 +227,15 @@ function monitorEditor(step, ctx) {
   if (missingInterval) intervalField.querySelector('input').style.borderColor = 'var(--warn)'
 
   return [
-    chipRow('方法', Object.entries(MONITOR_METHODS).map(([id, meta]) => ({
+    chipRow('Method', Object.entries(MONITOR_METHODS).map(([id, meta]) => ({
       id, label: meta.label, active: step.method === id,
     })), (item) => actions.updateStep(step.id, { method: item.id }), { namespace: 'monitorMethod' }),
     row([
       intervalField,
-      textField('終點判定', {
+      textField('End point', {
         name: 'criteria',
         value: step.criteria,
-        placeholder: '原料點消失',
+        placeholder: 'Starting material consumed',
         onInput: (value) => actions.updateStep(step.id, { criteria: value }, { key: 'criteria' }),
         onBlur: () => store.flush(),
       }),
@@ -255,7 +255,7 @@ const EDITORS = {
   monitor: monitorEditor,
 }
 
-// ── 共用零件 ───────────────────────────────────────────────────────────────
+// ── Shared parts ───────────────────────────────────────────────────────────────
 
 function labelMinutes(value) {
   if (value >= 60 && value % 60 === 0) return `${value / 60} h`

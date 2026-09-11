@@ -13,7 +13,7 @@ function setup() {
   return { store, actions: createActions(store), doc: () => store.getState().doc }
 }
 
-test('點擊模組即追加到序列末尾', () => {
+test('clicking a module appends to the end of the sequence', () => {
   const { actions, doc, store } = setup()
   actions.addStep('add')
   actions.addStep('stir')
@@ -21,7 +21,7 @@ test('點擊模組即追加到序列末尾', () => {
   assert.equal(store.getState().ui.selectedId, doc().steps[1].id)
 })
 
-test('拖曳排序：前後插入', () => {
+test('drag reorder: insert before and after', () => {
   const { actions, doc } = setup()
   actions.addStep('add')
   actions.addStep('stir')
@@ -31,11 +31,11 @@ test('拖曳排序：前後插入', () => {
   assert.deepEqual(doc().steps.map((s) => s.type), ['wash', 'add', 'stir'])
 })
 
-test('不得把步驟拖進自己的分支', () => {
+test('a step cannot be dragged into its own branch', () => {
   const { actions, doc } = setup()
   actions.addStep('extract')
   const parent = doc().steps[0]
-  actions.startBranch(parent.id, '水層')
+  actions.startBranch(parent.id, 'aqueous layer')
   actions.addStep('wash', { parentId: parent.id })
   const child = doc().steps[0].branch.steps[0]
   actions.moveStep(parent.id, child.id, 'after')
@@ -43,11 +43,11 @@ test('不得把步驟拖進自己的分支', () => {
   assert.equal(doc().steps[0].id, parent.id)
 })
 
-test('複製步驟會連分支一起複製並換新 id', () => {
+test('duplicating a step copies its branch with new ids', () => {
   const { actions, doc } = setup()
   actions.addStep('extract')
   const original = doc().steps[0]
-  actions.startBranch(original.id, '水層')
+  actions.startBranch(original.id, 'aqueous layer')
   actions.addStep('monitor', { parentId: original.id })
   actions.duplicateStep(original.id)
   const [a, b] = doc().steps
@@ -56,7 +56,7 @@ test('複製步驟會連分支一起複製並換新 id', () => {
   assert.notEqual(a.branch.steps[0].id, b.branch.steps[0].id)
 })
 
-test('分歧深度上限為兩層', () => {
+test('branch depth is capped at two levels', () => {
   const { actions, doc } = setup()
   actions.addStep('extract')
   const level0 = doc().steps[0]
@@ -70,7 +70,7 @@ test('分歧深度上限為兩層', () => {
   assert.equal(level2.branch, null)
 })
 
-test('刪除化合物會清掉步驟中的參照與基準', () => {
+test('deleting a compound clears step references and the basis', () => {
   const { actions, doc } = setup()
   actions.addStep('add')
   actions.updateStep(doc().steps[0].id, { compoundId: 'A' })
@@ -79,7 +79,7 @@ test('刪除化合物會清掉步驟中的參照與基準', () => {
   assert.equal(doc().basis.compoundId, null)
 })
 
-test('xN 為結構性變動，各成一筆歷史', () => {
+test('xN is structural; each change is its own history entry', () => {
   const { actions, doc, store } = setup()
   actions.addStep('wash')
   const before = store.historyDepth.past
@@ -89,27 +89,27 @@ test('xN 為結構性變動，各成一筆歷史', () => {
   assert.equal(store.historyDepth.past, before + 2)
 })
 
-test('xN 不得小於 1', () => {
+test('xN cannot go below 1', () => {
   const { actions, doc } = setup()
   actions.addStep('wash')
   actions.setRepeat(doc().steps[0].id, 0)
   assert.equal(doc().steps[0].repeat, 1)
 })
 
-test('切到 freeform 再切回模板，模板欄位仍在', () => {
+test('switching to freeform and back keeps the template fields', () => {
   const { actions, doc } = setup()
   actions.addStep('stir')
   const id = doc().steps[0].id
   actions.updateStep(id, { temp: 60 })
   actions.toggleFreeform(id, true)
-  actions.updateStep(id, { freeform: '特殊條件' })
-  assert.equal(findStep(doc(), id).step.freeform, '特殊條件')
+  actions.updateStep(id, { freeform: 'special conditions' })
+  assert.equal(findStep(doc(), id).step.freeform, 'special conditions')
   actions.toggleFreeform(id, false)
   assert.equal(findStep(doc(), id).step.freeform, null)
   assert.equal(findStep(doc(), id).step.temp, 60)
 })
 
-test('移除分支後編號重新連號', () => {
+test('removing a branch renumbers the steps', () => {
   const { actions, doc } = setup()
   actions.addStep('extract')
   const parent = doc().steps[0]
@@ -120,7 +120,7 @@ test('移除分支後編號重新連號', () => {
   assert.deepEqual([...numberSteps(doc().steps).values()], ['1', '2'])
 })
 
-test('內容沒變的修改不進歷史，也不清掉重做', () => {
+test('edits that change nothing do not enter history or clear redo', () => {
   const { actions, doc, store } = setup()
   actions.addStep('stir')
   const id = doc().steps[0].id
@@ -132,7 +132,7 @@ test('內容沒變的修改不進歷史，也不清掉重做', () => {
   assert.equal(store.getState().canRedo, true)
 })
 
-test('在 x1 按減號、重點同一顆條件按鈕、寫回相同標題，都不會多出復原步驟', () => {
+test('minus at x1, re-clicking the same condition button, or rewriting the same title adds no undo step', () => {
   const { actions, doc, store } = setup()
   actions.addStep('stir')
   const id = doc().steps[0].id

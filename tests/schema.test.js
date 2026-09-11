@@ -10,20 +10,20 @@ function sampleDoc() {
   doc.compounds = [createCompound({ id: 'A', name: 'A', mw: 100 })]
   doc.basis = { compoundId: 'A', amount: 5, unit: 'g' }
   const first = createStep('add', { compoundId: 'A', amount: { mode: 'mass', value: 5 } })
-  first.branch = { label: '水層', steps: [createStep('wash'), createStep('evaporate')] }
+  first.branch = { label: 'aqueous layer', steps: [createStep('wash'), createStep('evaporate')] }
   doc.steps = [first, createStep('stir', { temp: 25 })]
   return doc
 }
 
-test('匯出後再匯入不失真', () => {
+test('export then import is lossless', () => {
   const doc = sampleDoc()
   const again = normalizeDocument(JSON.parse(serializeDocument(doc)))
   assert.equal(serializeDocument(again), serializeDocument(doc))
 })
 
-test('正規化補齊缺欄位並丟掉未知型別', () => {
+test('normalization fills in missing fields and drops unknown types', () => {
   const doc = normalizeDocument({
-    steps: [{ id: 's1', type: 'stir' }, { id: 's2', type: '外星步驟' }],
+    steps: [{ id: 's1', type: 'stir' }, { id: 's2', type: 'alien-step' }],
     compounds: [{ id: 'c1', name: 'X', mw: '150', purity: null }],
   })
   assert.equal(doc.steps.length, 1)
@@ -33,23 +33,23 @@ test('正規化補齊缺欄位並丟掉未知型別', () => {
   assert.equal(doc.version, 1)
 })
 
-test('正規化保留未知欄位，供未來版本 round-trip', () => {
-  const doc = normalizeDocument({ steps: [{ id: 's1', type: 'stir', 自訂: '保留我' }] })
-  assert.equal(doc.steps[0]['自訂'], '保留我')
+test('normalization keeps unknown fields for round-trips with future versions', () => {
+  const doc = normalizeDocument({ steps: [{ id: 's1', type: 'stir', custom: 'keep me' }] })
+  assert.equal(doc.steps[0].custom, 'keep me')
 })
 
-test('主軸編號 1、2，分支編號 1.1、1.2', () => {
+test('main-axis numbers 1, 2; branch numbers 1.1, 1.2', () => {
   const numbers = numberSteps(sampleDoc().steps)
   assert.deepEqual([...numbers.values()], ['1', '1.1', '1.2', '2'])
 })
 
-test('走訪為深度優先，並帶出深度與支流名稱', () => {
+test('traversal is depth-first and carries depth and branch label', () => {
   const flat = flattenSteps(sampleDoc().steps)
   assert.deepEqual(flat.map((entry) => entry.depth), [0, 1, 1, 0])
-  assert.equal(flat[1].branchLabel, '水層')
+  assert.equal(flat[1].branchLabel, 'aqueous layer')
 })
 
-test('findStep 可跨分支尋找', () => {
+test('findStep searches across branches', () => {
   const doc = sampleDoc()
   const target = doc.steps[0].branch.steps[1]
   const hit = findStep(doc, target.id)
@@ -57,6 +57,6 @@ test('findStep 可跨分支尋找', () => {
   assert.equal(hit.depth, 1)
 })
 
-test('未知步驟型別不得建立', () => {
-  assert.throws(() => createStep('炸掉'), /未知步驟型別/)
+test('unknown step types cannot be created', () => {
+  assert.throws(() => createStep('explode'), /Unknown step type/)
 })

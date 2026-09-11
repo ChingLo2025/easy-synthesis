@@ -1,7 +1,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 
-// node 沒有 localStorage：裝一個記憶體版本，讓個人庫的寫入可以被觀察
+// Node has no localStorage: install an in-memory one so writes to the personal library can be observed
 const memory = new Map()
 globalThis.localStorage = {
   getItem: (key) => (memory.has(key) ? memory.get(key) : null),
@@ -14,7 +14,7 @@ const { createActions } = await import('../src/state/actions.js')
 const { createDocument } = await import('../src/model/schema.js')
 const { loadLibrary } = await import('../src/model/library.js')
 
-test('逐字輸入化合物名稱時，不會把每個前綴都記進個人庫', () => {
+test('typing a compound name char by char does not record every prefix in the personal library', () => {
   memory.clear()
   const actions = createActions(createStore(createDocument()))
   const compound = actions.addCompound({ name: '' })
@@ -24,7 +24,7 @@ test('逐字輸入化合物名稱時，不會把每個前綴都記進個人庫',
   assert.deepEqual(loadLibrary().map((entry) => entry.name), ['MeOH'])
 })
 
-test('結構性修改（例如改角色）立即記入個人庫', () => {
+test('structural changes (e.g. changing the role) are recorded in the personal library immediately', () => {
   memory.clear()
   const actions = createActions(createStore(createDocument()))
   const compound = actions.addCompound({ name: 'THF', role: 'reactant' })

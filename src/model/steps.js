@@ -1,7 +1,10 @@
-// 步驟型別的中央定義：面板順序、視覺分類、預設值、可帶入的化合物欄位。
-// 新增型別時只動這裡與 narrative/flow 的對應表。
+// Central definition of step types: panel order, visual family, defaults, compound fields.
+// Adding a type only touches this file and the narrative/flow lookup tables.
+//
+// `label` is interface text (English). `zh` holds the Chinese wording used only by
+// the Chinese Experimental narrative; `labelEn` / `en` are the English narrative wording.
 
-/** 三類色相：投入 / 轉化 / 分離。其餘近乎單色。 */
+/** Three family hues: input / transform / separate. Everything else is near-monochrome. */
 export const FAMILY = {
   input: 'input',
   transform: 'transform',
@@ -10,7 +13,7 @@ export const FAMILY = {
 
 export const STEP_TYPES = {
   add: {
-    label: '加入物質',
+    label: 'Add',
     labelEn: 'Addition',
     family: FAMILY.input,
     icon: 'add',
@@ -18,7 +21,7 @@ export const STEP_TYPES = {
     flowSide: 'in',
   },
   stir: {
-    label: '攪拌',
+    label: 'Stir',
     labelEn: 'Stirring',
     family: FAMILY.transform,
     icon: 'stir',
@@ -26,7 +29,7 @@ export const STEP_TYPES = {
     flowSide: null,
   },
   extract: {
-    label: '萃取',
+    label: 'Extract',
     labelEn: 'Extraction',
     family: FAMILY.separate,
     icon: 'extract',
@@ -34,7 +37,7 @@ export const STEP_TYPES = {
     flowSide: 'both',
   },
   wash: {
-    label: '水洗',
+    label: 'Wash',
     labelEn: 'Washing',
     family: FAMILY.separate,
     icon: 'wash',
@@ -42,17 +45,17 @@ export const STEP_TYPES = {
     flowSide: 'both',
   },
   filter: {
-    label: '過濾',
+    label: 'Filter',
     labelEn: 'Filtration',
     family: FAMILY.separate,
     icon: 'filter',
-    // 濾餅洗液選填，沒填不算缺漏
+    // The cake rinse is optional; leaving it empty is not a missing value
     compoundField: 'solventId',
     compoundOptional: true,
     flowSide: 'both',
   },
   centrifuge: {
-    label: '離心',
+    label: 'Centrifuge',
     labelEn: 'Centrifugation',
     family: FAMILY.separate,
     icon: 'centrifuge',
@@ -60,7 +63,7 @@ export const STEP_TYPES = {
     flowSide: 'out',
   },
   evaporate: {
-    label: '濃縮',
+    label: 'Concentrate',
     labelEn: 'Concentration',
     family: FAMILY.separate,
     icon: 'evaporate',
@@ -68,7 +71,7 @@ export const STEP_TYPES = {
     flowSide: 'out',
   },
   dry: {
-    label: '乾燥',
+    label: 'Dry',
     labelEn: 'Drying',
     family: FAMILY.separate,
     icon: 'dry',
@@ -76,7 +79,7 @@ export const STEP_TYPES = {
     flowSide: 'both',
   },
   monitor: {
-    label: '取樣／追蹤',
+    label: 'Monitor',
     labelEn: 'Monitoring',
     family: FAMILY.separate,
     icon: 'monitor',
@@ -88,48 +91,48 @@ export const STEP_TYPES = {
 export const STEP_ORDER = ['add', 'stir', 'extract', 'wash', 'filter', 'centrifuge', 'evaporate', 'dry', 'monitor']
 
 export const AMOUNT_MODES = {
-  mass: { label: '質量', unit: 'g', hint: 'g' },
-  volume: { label: '體積', unit: 'mL', hint: 'mL' },
-  equiv: { label: '當量', unit: 'eq', hint: 'eq' },
+  mass: { label: 'Mass', unit: 'g', hint: 'g' },
+  volume: { label: 'Volume', unit: 'mL', hint: 'mL' },
+  equiv: { label: 'Equiv', unit: 'eq', hint: 'eq' },
   'mol%': { label: 'mol%', unit: 'mol%', hint: 'mol%' },
   vol_per_g: { label: 'V/W', unit: 'mL/g', hint: 'mL per g of basis' },
 }
 
 export const ROLES = {
-  reactant: { label: '反應物', labelEn: 'reactant' },
-  solvent: { label: '溶劑', labelEn: 'solvent' },
-  reagent: { label: '試劑', labelEn: 'reagent' },
-  catalyst: { label: '催化劑', labelEn: 'catalyst' },
-  quench: { label: '淬熄劑', labelEn: 'quench' },
+  reactant: { label: 'Reactant', labelEn: 'reactant' },
+  solvent: { label: 'Solvent', labelEn: 'solvent' },
+  reagent: { label: 'Reagent', labelEn: 'reagent' },
+  catalyst: { label: 'Catalyst', labelEn: 'catalyst' },
+  quench: { label: 'Quench', labelEn: 'quench' },
 }
 
 export const ROLE_ORDER = ['reactant', 'reagent', 'catalyst', 'solvent', 'quench']
 
 export const ATMOSPHERES = {
-  air: { label: '空氣', labelEn: 'air' },
-  N2: { label: 'N₂', labelEn: 'nitrogen' },
-  Ar: { label: 'Ar', labelEn: 'argon' },
+  air: { label: 'Air', zh: '空氣', labelEn: 'air' },
+  N2: { label: 'N₂', zh: 'N₂', labelEn: 'nitrogen' },
+  Ar: { label: 'Ar', zh: 'Ar', labelEn: 'argon' },
 }
 
 export const STIR_SPECIALS = {
-  dark: { label: '遮光', labelEn: 'protected from light' },
-  reflux: { label: '迴流', labelEn: 'at reflux' },
-  vacuum: { label: '減壓', labelEn: 'under reduced pressure' },
-  sealed: { label: '封管', labelEn: 'in a sealed tube' },
-  sonication: { label: '超音波', labelEn: 'under sonication' },
+  dark: { label: 'Dark', labelEn: 'protected from light' },
+  reflux: { label: 'Reflux', labelEn: 'at reflux' },
+  vacuum: { label: 'Vacuum', labelEn: 'under reduced pressure' },
+  sealed: { label: 'Sealed tube', labelEn: 'in a sealed tube' },
+  sonication: { label: 'Sonication', labelEn: 'under sonication' },
 }
 
 export const EVAPORATE_METHODS = {
-  rotary: { label: '旋轉濃縮', labelEn: 'rotary evaporation' },
-  vacuum: { label: '真空濃縮', labelEn: 'evaporation under vacuum' },
-  distill: { label: '蒸餾', labelEn: 'distillation' },
+  rotary: { label: 'Rotavap', zh: '旋轉濃縮', labelEn: 'rotary evaporation' },
+  vacuum: { label: 'Vacuum', zh: '真空濃縮', labelEn: 'evaporation under vacuum' },
+  distill: { label: 'Distillation', zh: '蒸餾', labelEn: 'distillation' },
 }
 
 export const DRY_METHODS = {
-  agent: { label: '乾燥劑', labelEn: 'drying agent' },
-  vacuum_oven: { label: '真空烘箱', labelEn: 'vacuum oven' },
-  nitrogen: { label: '氮氣吹乾', labelEn: 'nitrogen stream' },
-  lyophilize: { label: '冷凍乾燥', labelEn: 'lyophilisation' },
+  agent: { label: 'Drying agent', zh: '乾燥劑', labelEn: 'drying agent' },
+  vacuum_oven: { label: 'Vacuum oven', zh: '真空烘箱', labelEn: 'vacuum oven' },
+  nitrogen: { label: 'N₂ stream', zh: '氮氣吹乾', labelEn: 'nitrogen stream' },
+  lyophilize: { label: 'Freeze-dry', zh: '冷凍乾燥', labelEn: 'lyophilisation' },
 }
 
 export const MONITOR_METHODS = {
@@ -137,35 +140,35 @@ export const MONITOR_METHODS = {
   HPLC: { label: 'HPLC', labelEn: 'HPLC' },
   GC: { label: 'GC', labelEn: 'GC' },
   NMR: { label: 'NMR', labelEn: 'NMR' },
-  retain: { label: '取樣留存', labelEn: 'sample retained' },
+  retain: { label: 'Retain sample', labelEn: 'sample retained' },
 }
 
 export const PHASES = {
-  organic: { label: '有機層', labelEn: 'organic layer' },
-  aqueous: { label: '水層', labelEn: 'aqueous layer' },
+  organic: { label: 'Organic layer', zh: '有機層', labelEn: 'organic layer' },
+  aqueous: { label: 'Aqueous layer', zh: '水層', labelEn: 'aqueous layer' },
 }
 
-/** 攪拌的緩慢升降溫；溫度欄位即目標溫度 */
+/** Slow heating/cooling while stirring; the temperature field is the target temperature */
 export const RAMPS = {
-  up: { label: '緩慢升溫', labelEn: 'slowly heated', rateLabel: '升溫速率' },
-  down: { label: '緩慢降溫', labelEn: 'slowly cooled', rateLabel: '降溫速率' },
+  up: { label: 'Slow heating', zh: '緩慢升溫', labelEn: 'slowly heated', rateLabel: 'Heating rate' },
+  down: { label: 'Slow cooling', zh: '緩慢降溫', labelEn: 'slowly cooled', rateLabel: 'Cooling rate' },
 }
 
 export const FILTER_METHODS = {
-  vacuum: { label: '抽氣過濾', zh: '抽氣過濾', en: 'filtered under reduced pressure' },
-  gravity: { label: '重力過濾', zh: '重力過濾', en: 'filtered by gravity' },
-  celite: { label: '矽藻土', zh: '經矽藻土墊過濾', en: 'filtered through a pad of Celite' },
-  syringe: { label: '針筒過濾器', zh: '以針筒過濾器過濾', en: 'passed through a syringe filter' },
+  vacuum: { label: 'Vacuum', zh: '抽氣過濾', en: 'filtered under reduced pressure' },
+  gravity: { label: 'Gravity', zh: '重力過濾', en: 'filtered by gravity' },
+  celite: { label: 'Celite', zh: '經矽藻土墊過濾', en: 'filtered through a pad of Celite' },
+  syringe: { label: 'Syringe filter', zh: '以針筒過濾器過濾', en: 'passed through a syringe filter' },
 }
 
 export const FILTER_KEPT = {
-  filtrate: { label: '濾液', labelEn: 'filtrate' },
-  solid: { label: '濾餅', labelEn: 'solid' },
+  filtrate: { label: 'Filtrate', labelEn: 'filtrate' },
+  solid: { label: 'Solid', labelEn: 'solid' },
 }
 
 export const CENTRIFUGE_KEPT = {
-  pellet: { label: '沉澱', labelEn: 'pellet' },
-  supernatant: { label: '上清液', labelEn: 'supernatant' },
+  pellet: { label: 'Pellet', labelEn: 'pellet' },
+  supernatant: { label: 'Supernatant', labelEn: 'supernatant' },
 }
 
 export const SPEED_UNITS = {
@@ -173,5 +176,5 @@ export const SPEED_UNITS = {
   g: { label: '×g', text: '× g' },
 }
 
-/** 分歧深度軟性上限（§2）。超過時提示改為另開一份程序。 */
+/** Soft cap on branch depth (§2). Beyond it, suggest starting a separate procedure. */
 export const MAX_BRANCH_DEPTH = 2

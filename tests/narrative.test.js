@@ -19,7 +19,7 @@ function simpleDoc() {
   return doc
 }
 
-test('純模板步驟：中英文皆生成', () => {
+test('pure template step: both Chinese and English are generated', () => {
   const doc = simpleDoc()
   doc.steps = [createStep('add', { compoundId: 'A', amount: { mode: 'mass', value: 10 }, vessel: '250 mL 圓底燒瓶' })]
   const narrative = run(doc)
@@ -28,7 +28,7 @@ test('純模板步驟：中英文皆生成', () => {
   assert.equal(narrative.pending, 0)
 })
 
-test('有 note：中文原樣附加，英文留白', () => {
+test('with a note: appended verbatim in Chinese, English left blank', () => {
   const doc = simpleDoc()
   doc.steps = [createStep('stir', { temp: 25, time: 30, note: '需以冰浴輔助' })]
   const narrative = run(doc)
@@ -38,9 +38,9 @@ test('有 note：中文原樣附加，英文留白', () => {
   assert.ok(narrative.en.every(isMarker))
 })
 
-test('有 freeform：中英文皆留白', () => {
+test('with freeform: both Chinese and English left blank', () => {
   const doc = simpleDoc()
-  doc.steps = [createStep('stir', { freeform: '以特殊夾套控溫程式升溫' })]
+  doc.steps = [createStep('stir', { freeform: 'heated with a custom jacket program' })]
   const narrative = run(doc)
   assert.equal(narrative.pendingZh, 1)
   assert.equal(narrative.pendingEn, 1)
@@ -49,9 +49,9 @@ test('有 freeform：中英文皆留白', () => {
   assert.match(narrative.zh[0], /步驟 1：手動輸入，待補寫/)
 })
 
-test('清空 freeform 後敘述自動恢復生成', () => {
+test('clearing freeform restores the generated narrative', () => {
   const doc = simpleDoc()
-  const step = createStep('stir', { temp: 40, time: 60, freeform: '暫時手寫' })
+  const step = createStep('stir', { temp: 40, time: 60, freeform: 'temporary manual text' })
   doc.steps = [step]
   assert.equal(run(doc).pendingZh, 1)
   step.freeform = null
@@ -60,7 +60,7 @@ test('清空 freeform 後敘述自動恢復生成', () => {
   assert.match(restored.zh.join(''), /40 °C 攪拌 1 小時/)
 })
 
-test('連續加料合併為一句，滴加自成一句', () => {
+test('consecutive additions merge into one sentence; dropwise gets its own', () => {
   const doc = simpleDoc()
   doc.steps = [
     createStep('add', { compoundId: 'A', amount: { mode: 'mass', value: 10 }, vessel: '燒瓶' }),
@@ -73,7 +73,7 @@ test('連續加料合併為一句，滴加自成一句', () => {
   assert.match(narrative.zh[1], /^緩慢滴入/)
 })
 
-test('攪拌接在加料之後成為同一句', () => {
+test('stirring after an addition joins the same sentence', () => {
   const doc = simpleDoc()
   doc.steps = [
     createStep('add', { compoundId: 'A', amount: { mode: 'mass', value: 10 } }),
@@ -83,7 +83,7 @@ test('攪拌接在加料之後成為同一句', () => {
   assert.match(run(doc).zh[0], /攪拌 15 分鐘。$/)
 })
 
-test('分支自成段落並標出支流名稱', () => {
+test('branches get their own paragraph labelled with the branch name', () => {
   const doc = simpleDoc()
   const extract = createStep('extract', { solventId: 'S', amount: { mode: 'volume', value: 30 } })
   extract.branch = { label: '水層', steps: [createStep('monitor', { method: 'retain', interval: 60 })] }
@@ -93,14 +93,14 @@ test('分支自成段落並標出支流名稱', () => {
   assert.ok(narrative.zh.some((sentence) => sentence.includes('移除溶劑')))
 })
 
-test('重複次數寫入敘述', () => {
+test('the repeat count appears in the narrative', () => {
   const doc = simpleDoc()
   doc.steps = [createStep('wash', { solventId: 'S', amount: { mode: 'volume', value: 20 }, repeat: 3 })]
   assert.match(run(doc).zh.join(''), /洗滌三次/)
   assert.match(run(doc).en.join(' '), /\(20 mL x 3\)/)
 })
 
-test('範例程序可完整生成且無待補', () => {
+test('the example procedure generates fully with nothing pending', () => {
   const narrative = run(createSampleDocument())
   assert.equal(narrative.pending, 0)
   assert.ok(narrative.zh.join('').length > 80)

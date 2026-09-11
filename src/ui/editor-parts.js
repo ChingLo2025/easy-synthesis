@@ -1,4 +1,4 @@
-// 編輯器共用零件：計量欄位、推導值、選定化合物後帶入上次使用值、預溶欄位。
+// Shared editor parts: amount fields, derived values, recalling last-used values after picking a compound, pre-dissolve fields.
 import { el } from './dom.js'
 import { compoundPicker } from './picker.js'
 import { field, numberField, numberInput, row } from './fields.js'
@@ -6,7 +6,7 @@ import { AMOUNT_MODES } from '../model/steps.js'
 import { formatAmount, formatEquiv, formatMass, formatVolume, isNum } from '../model/units.js'
 import { recallDefaults } from '../state/prefs.js'
 
-/** 計量按鈕即 amount.mode 的切換，各模式共用同一組數值欄位 */
+/** The amount buttons switch amount.mode; all modes share one value field */
 export function amountBlock(step, ctx, compound) {
   const { actions, store } = ctx
   const isSolvent = compound?.role === 'solvent' || compound?.role === 'quench'
@@ -32,7 +32,7 @@ export function amountBlock(step, ctx, compound) {
   })
 
   return el('div', { style: { display: 'flex', gap: '8px', alignItems: 'flex-end', flexWrap: 'wrap' } }, [
-    field('計量', switcher),
+    field('Amount', switcher),
     el('div', { class: 'field', style: { flex: '1 1 110px' } }, [
       el('span', { class: 'field__label' }, AMOUNT_MODES[mode].unit),
       input,
@@ -40,7 +40,7 @@ export function amountBlock(step, ctx, compound) {
   ])
 }
 
-/** 推導值：驅動欄位以外的三欄為灰色，不可直接編輯 */
+/** Derived values: the three non-driving columns are grey and read-only */
 export function derivedStrip(metrics, step) {
   const strip = el('div', { class: 'derived' })
   if (!metrics) return strip
@@ -60,7 +60,7 @@ export function derivedStrip(metrics, step) {
   }
   if (metrics.repeat > 1) {
     strip.append(el('span', { class: 'derived__item' }, [
-      el('span', {}, `x${metrics.repeat} 合計`),
+      el('span', {}, `x${metrics.repeat} total`),
       el('b', {}, formatVolume(metrics.totalVolume) ?? formatMass(metrics.totalMass) ?? '—'),
     ]))
   }
@@ -70,7 +70,7 @@ export function derivedStrip(metrics, step) {
   return strip
 }
 
-/** 選定化合物後，帶入同型別、同化合物的上次使用值（只填目前還空著的欄位） */
+/** After picking a compound, fill in last-used values for the same type and compound (empty fields only) */
 export function pickCompound(ctx, stepId, fieldName, choice) {
   const { actions, step } = ctx
   const compoundId = choice.compoundId ?? actions.addCompound(choice.create).id
@@ -91,21 +91,21 @@ function isEmpty(value) {
   return value === null || value === undefined || value === '' || (Array.isArray(value) && !value.length)
 }
 
-/** 預溶：選溶劑、填體積（mL） */
+/** Pre-dissolve: pick a solvent and enter its volume (mL) */
 export function dissolveFields(step, ctx) {
   const { doc, actions, store } = ctx
   return row([
-    field('預溶溶劑', compoundPicker({
+    field('Pre-dissolve solvent', compoundPicker({
       doc,
       value: step.dissolve?.solventId ?? null,
       filter: 'solvent',
-      placeholder: '選擇溶劑',
+      placeholder: 'Select solvent',
       onPick: (choice) => {
         const solventId = choice.compoundId ?? actions.addCompound(choice.create).id
         actions.updateDissolve(step.id, { solventId })
       },
     })),
-    numberField('溶劑體積', {
+    numberField('Solvent volume', {
       name: 'dissolveVolume', value: step.dissolve?.volume, suffix: 'mL',
       onInput: (volume) => actions.updateDissolve(step.id, { volume }, { key: 'dissolveVolume' }),
       onBlur: () => store.flush(),

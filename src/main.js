@@ -1,4 +1,4 @@
-// 應用組裝：狀態、三個面板、頂列、鍵盤、自動存檔。
+// App assembly: state, the three panels, top bar, keyboard, autosave.
 import { compute } from './engine/compute.js'
 import { createDocument, normalizeDocument } from './model/schema.js'
 import { createSampleDocument } from './model/sample.js'
@@ -68,13 +68,13 @@ function restoreDocument() {
   }
 }
 
-// ── 渲染 ─────────────────────────────────────────────────────────────────
+// ── Rendering ─────────────────────────────────────────────────────────────────
 function render(reason) {
   const { doc, ui } = store.getState()
   metrics = compute(doc)
 
   const focus = captureFocus()
-  // 重建 DOM 期間，被移除的焦點欄位送出的 blur 不算提交（見 store.holdFlush）
+  // While the DOM is rebuilt, blur from the removed focused field is not a commit (see store.holdFlush)
   store.holdFlush(() => {
     palette.render()
     sequence.render()
@@ -102,10 +102,10 @@ function render(reason) {
 }
 
 /**
- * 全量重繪會換掉輸入框，這裡記下焦點位置，重繪後接回去。
- * 在 data-scope（步驟卡、支流、基準）範圍內找：有 name 的欄位以名稱定位，
- * 按鈕等沒有 name 的元素以順序定位，並比對種類與文字。
- * 找不到同一個元素就不接，寧可失焦，也不把焦點或內容放進別的欄位。
+ * A full re-render replaces the inputs, so the focus position is recorded here and reattached afterwards.
+ * The search stays within data-scope (step card, branch, basis): fields with a name are located by name,
+ * elements without a name (buttons etc.) by order, checked against kind and text.
+ * If the same element can't be found, focus isn't reattached: losing focus beats putting focus or content in another field.
  */
 function captureFocus() {
   const active = document.activeElement
@@ -137,18 +137,18 @@ function restoreFocus(snapshot, { keepRaw = false } = {}) {
   if (!node || signatureOf(node) !== snapshot.signature) return
   node.focus({ preventScroll: true })
   if (!isTextual(node)) return
-  // 打字中保留使用者的原字串（例如 "0."）；復原、重做時以模型值為準，游標放到最後
+  // While typing, keep the user's raw string (e.g. "0."); on undo/redo use the model value and put the caret at the end
   if (keepRaw && node.value !== snapshot.raw) node.value = snapshot.raw
   const end = node.value.length
   const selection = keepRaw && snapshot.selection ? snapshot.selection : { start: end, end }
   try {
     node.setSelectionRange(selection.start, selection.end)
   } catch {
-    /* 不支援選取範圍的欄位，忽略 */
+    /* Field doesn't support selection ranges; ignore */
   }
 }
 
-/** 元素種類、名稱與按鈕文字（或提示）；簽名相同才視為同一個元素 */
+/** Element kind, name and button text (or title); the same signature means the same element */
 function signatureOf(node) {
   const label = node.tagName === 'BUTTON' ? node.textContent.trim() || node.title : ''
   return [node.tagName, node.type ?? '', node.getAttribute('name') ?? '', label].join('|')
@@ -172,17 +172,17 @@ function focusables(root) {
 
 function flashHint(reason) {
   const { flash } = store.getState()
-  toast(reason === 'undo' ? `已復原${flash.length ? `（${flash.length} 處變動）` : ''}` : '已重做', {
+  toast(reason === 'undo' ? `Undone${flash.length ? ` (${flash.length} changed)` : ''}` : 'Redone', {
     icon: reason === 'undo' ? 'undo' : 'redo',
   })
 }
 
-// ── 頂列 ─────────────────────────────────────────────────────────────────
-// 頂列欄位只建立一次；重繪時只同步數值，不重建使用者正在輸入的欄位
+// ── Top bar ─────────────────────────────────────────────────────────────────
+// Top bar fields are built once; re-renders only sync values and never rebuild a field the user is typing in
 const META_FIELDS = [
-  { key: 'title', placeholder: '未命名程序', className: 'meta-input--title' },
-  { key: 'author', placeholder: '操作者', className: 'meta-input--sm' },
-  { key: 'batchNo', placeholder: '批號', className: 'meta-input--sm' },
+  { key: 'title', placeholder: 'Untitled procedure', className: 'meta-input--title' },
+  { key: 'author', placeholder: 'Operator', className: 'meta-input--sm' },
+  { key: 'batchNo', placeholder: 'Batch no.', className: 'meta-input--sm' },
   { key: 'date', placeholder: '', className: 'meta-input--sm', type: 'date' },
 ]
 
@@ -200,7 +200,7 @@ function mountMeta() {
   return inputs
 }
 
-/** 輸入中的欄位不覆寫；復原、重做、載入範本時才強制同步 */
+/** Don't overwrite a field being edited; force a sync only on undo, redo and template load */
 function syncMeta(doc, { force = false } = {}) {
   const meta = doc.meta ?? {}
   for (const [key, input] of metaInputs) {
@@ -215,14 +215,14 @@ function renderTopActions() {
   const { canUndo, canRedo } = store.getState()
   clear(nodes.topActions)
   nodes.topActions.append(
-    iconButton('undo', '復原 (Ctrl+Z)', () => store.undo(), !canUndo),
-    iconButton('redo', '重做 (Ctrl+Shift+Z)', () => store.redo(), !canRedo),
+    iconButton('undo', 'Undo (Ctrl+Z)', () => store.undo(), !canUndo),
+    iconButton('redo', 'Redo (Ctrl+Shift+Z)', () => store.redo(), !canRedo),
     el('span', { class: 'sep' }),
-    iconButton('upload', '匯入 JSON', importJson),
-    iconButton('download', '匯出 JSON', () => downloadDocument(store.getState().doc)),
+    iconButton('upload', 'Import JSON', importJson),
+    iconButton('download', 'Export JSON', () => downloadDocument(store.getState().doc)),
     el('button', { class: 'btn btn--primary', type: 'button', onclick: () => window.print() }, [
       el('span', { html: iconMarkup('print', { size: 15 }) }),
-      el('span', {}, '列印 / PDF'),
+      el('span', {}, 'Print / PDF'),
     ]),
   )
 }
@@ -241,7 +241,7 @@ function renderTabs(active = 'flow') {
 
   clear(nodes.documentActions)
   nodes.documentActions.append(
-    el('button', { class: 'btn btn--ghost', type: 'button', onclick: loadSample }, '載入範例'),
+    el('button', { class: 'btn btn--ghost', type: 'button', onclick: loadSample }, 'Load example'),
   )
 }
 
@@ -251,13 +251,13 @@ function renderStatus() {
   const warns = metrics.warnings.filter((w) => w.level === 'warn').length
   clear(nodes.status)
   append(nodes.status, [
-    statusItem('flow', `${metrics.rows.length} 步驟`),
-    statusItem('table', `${doc.compounds.length} 化合物`),
-    errors ? statusItem('warning', `${errors} 項待補`, 'error') : null,
-    warns ? statusItem('info', `${warns} 項提醒`, 'warn') : null,
+    statusItem('flow', `${metrics.rows.length} steps`),
+    statusItem('table', `${doc.compounds.length} compounds`),
+    errors ? statusItem('warning', `${errors} to fix`, 'error') : null,
+    warns ? statusItem('info', `${warns} warnings`, 'warn') : null,
     el('span', { class: 'statusbar__spacer' }),
-    statusItem('check', canUndo ? `可復原 ${store.historyDepth.past} 步` : '尚無變更'),
-    statusItem('download', '已自動存檔'),
+    statusItem('check', canUndo ? `${store.historyDepth.past} undo steps` : 'No changes'),
+    statusItem('download', 'Autosaved'),
   ])
 }
 
@@ -279,13 +279,13 @@ function iconButton(icon, title, onclick, disabled = false) {
   })
 }
 
-// ── 指令 ─────────────────────────────────────────────────────────────────
+// ── Commands ─────────────────────────────────────────────────────────────────
 async function importJson() {
   try {
     const doc = await pickDocument()
     if (!doc) return
     store.replace(doc, { resetHistory: true, ui: { selectedId: null } })
-    toast('已匯入程序', { icon: 'upload' })
+    toast('Procedure imported', { icon: 'upload' })
   } catch (error) {
     toast(error.message, { tone: 'error', icon: 'warning' })
   }
@@ -293,17 +293,17 @@ async function importJson() {
 
 function loadSample() {
   store.replace(createSampleDocument(), { resetHistory: true, ui: { selectedId: null } })
-  toast('已載入範例程序', { icon: 'template' })
+  toast('Example procedure loaded', { icon: 'template' })
 }
 
 function saveWholeTemplate() {
   promptModal({
-    title: '另存為範本',
-    label: '範本名稱',
+    title: 'Save as template',
+    label: 'Template name',
     value: store.getState().doc.meta?.title ?? '',
     onConfirm: (name) => {
       saveTemplate(name, store.getState().doc)
-      toast(`已儲存範本「${name}」`, { icon: 'template' })
+      toast(`Template “${name}” saved`, { icon: 'template' })
     },
   })
 }
@@ -316,9 +316,9 @@ function openTemplates() {
     deleteTemplate,
     deleteGroup,
     onLoadTemplate: (entry) => {
-      // 載入範本時重置歷史，不疊加
+      // Loading a template resets history instead of stacking onto it
       store.replace(templateToDocument(entry), { resetHistory: true, ui: { selectedId: null } })
-      toast(`已載入範本「${entry.name}」`, { icon: 'template' })
+      toast(`Template “${entry.name}” loaded`, { icon: 'template' })
     },
     onInsertGroup: (entry) => {
       const { steps, compounds } = expandGroup(entry, store.getState().doc)
@@ -326,25 +326,25 @@ function openTemplates() {
         doc.compounds.push(...compounds)
         doc.steps.push(...steps)
       }, { structural: true })
-      toast(`已插入「${entry.name}」共 ${steps.length} 步`, { icon: 'template' })
+      toast(`Inserted “${entry.name}” (${steps.length} steps)`, { icon: 'template' })
     },
     onSaveGroup: (name, steps) => {
       saveGroup(name, steps, store.getState().doc.compounds)
-      toast(`已儲存群組「${name}」`, { icon: 'template' })
+      toast(`Group “${name}” saved`, { icon: 'template' })
     },
   })
 }
 
 async function handleCopy(text, hasPending) {
   const ok = await copyText(text)
-  if (!ok) return toast('瀏覽器拒絕存取剪貼簿', { tone: 'error', icon: 'warning' })
-  toast(hasPending ? '已複製（仍含待補標記）' : '已複製純文字', {
+  if (!ok) return toast('The browser denied clipboard access', { tone: 'error', icon: 'warning' })
+  toast(hasPending ? 'Copied (still contains to-be-written markers)' : 'Plain text copied', {
     tone: hasPending ? 'warn' : 'info',
     icon: hasPending ? 'warning' : 'copy',
   })
 }
 
-// ── 鍵盤：全域攔截 Ctrl+Z 並 preventDefault，不與輸入框原生 undo 並存 ──────
+// ── Keyboard: Ctrl+Z is intercepted globally with preventDefault, never mixed with native input undo ──────
 window.addEventListener('keydown', (event) => {
   const meta = event.ctrlKey || event.metaKey
   if (!meta) return
@@ -362,7 +362,7 @@ window.addEventListener('keydown', (event) => {
   }
 }, true)
 
-// 捲動位置進入快照，復原後回到原處
+// The scroll position is part of the snapshot, so undo returns to the same place
 nodes.sequencePanel?.addEventListener('scroll', () => {
   store.setUI({ scrollTop: nodes.sequencePanel.scrollTop }, { silent: true })
 }, { passive: true })
@@ -371,7 +371,7 @@ const metaInputs = mountMeta()
 store.subscribe((_state, reason) => render(reason))
 render('init')
 
-// 首次開啟且沒有內容時，提示可載入範例
+// On first open with no content, hint that the example can be loaded
 if (!store.getState().doc.steps.length && !load(KEYS.doc, null)) {
-  toast('點右上「載入範例」可看完整程序', { icon: 'info', duration: 4000 })
+  toast('Click “Load example” at the top right to see a full procedure', { icon: 'info', duration: 4000 })
 }

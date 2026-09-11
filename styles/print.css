@@ -1,4 +1,4 @@
-/* 列印：瀏覽器另存 PDF 即為向量輸出。不引入 PDF 函式庫。 */
+/* Print: saving to PDF from the browser gives vector output. No PDF library. */
 @page {
   size: A4 portrait;
   margin: 14mm 12mm;
@@ -31,7 +31,7 @@
     gap: 16px;
   }
 
-  /* 每個節點、每張卡、每個區塊都不跨頁斷開 */
+  /* Keep every node, card and block from breaking across pages */
   .flow__row,
   .flow__node,
   .flow__branch,
@@ -49,7 +49,7 @@
 
   .narrative__text { font-size: 10pt; line-height: 1.7; }
 
-  /* 保留分類色相，但降低背景飽和，避免吃墨 */
+  /* Keep the family hues but lower background saturation to save ink */
   .flow__node,
   .total-card,
   .warning-item,
@@ -60,7 +60,7 @@
   a[href]::after { content: ""; }
 }
 
-/* 螢幕上的列印預覽輔助：文件面板本身即所見即所得 */
+/* On-screen print preview aid: the document panel itself is WYSIWYG */
 @media screen and (max-width: 1180px) {
   .workspace { grid-template-columns: 190px minmax(280px, 1fr) minmax(360px, 1fr); }
   .document { padding: 20px 22px; }

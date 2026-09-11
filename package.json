@@ -1,7 +1,7 @@
 {
   "name": "easy-synthesis",
   "version": "1.0.0",
-  "description": "合成實驗流程圖工具 — 單一 JSON 資料來源，投影出流程圖、計量表、列印稿與敘述文字",
+  "description": "Synthesis procedure flowchart tool: a single JSON source projected into a flow diagram, quantities table, printout and narrative",
   "private": true,
   "type": "module",
   "scripts": {

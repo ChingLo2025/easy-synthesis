@@ -1,11 +1,11 @@
-// 狀態容器與 Undo / Redo。
-// 實作方式依規格 §5：整份狀態深拷貝推入堆疊（past[] / present / future[]），
-// 文件夠小，不需 command pattern。快照包含選取狀態與捲動位置。
+// State container with Undo / Redo.
+// As in spec §5: the whole state is deep-copied onto stacks (past[] / present / future[]);
+// the document is small enough that no command pattern is needed. Snapshots include the selection and scroll position.
 import { cloneDocument } from '../model/schema.js'
 
-/** 規格要求至少 100 步，留一倍餘裕 */
+/** The spec requires at least 100 steps; keep double for headroom */
 export const HISTORY_LIMIT = 200
-/** 連續修改同一欄位的合併視窗 */
+/** Coalescing window for consecutive edits to the same field */
 export const COALESCE_MS = 500
 
 export function createStore(initialDoc, initialUI = {}) {
@@ -46,9 +46,9 @@ export function createStore(initialDoc, initialUI = {}) {
   }
 
   /**
-   * 修改文件。
-   * key        — 同一 key 的連續修改合併為一筆（欄位輸入用）
-   * structural — 增刪、排序、改 xN，立即各成一筆，且不與前後合併
+   * Modify the document.
+   * key        — consecutive edits with the same key merge into one entry (for field input)
+   * structural — add/remove, reorder, change xN: each becomes its own entry immediately and never merges
    */
   function transact(mutate, { key = null, structural = false, silent = false } = {}) {
     if (structural || !key) {
@@ -70,7 +70,7 @@ export function createStore(initialDoc, initialUI = {}) {
     return present.doc
   }
 
-  /** 不進入歷史的介面狀態（選取、捲動、分頁） */
+  /** UI state that stays out of history (selection, scroll, tab) */
   function setUI(partial, { silent = false } = {}) {
     present.ui = { ...present.ui, ...partial }
     if (!silent) notify('ui')
@@ -81,7 +81,7 @@ export function createStore(initialDoc, initialUI = {}) {
     pendingTimer = setTimeout(flushPending, COALESCE_MS)
   }
 
-  /** 提交時機：焦點離開、停頓 500 ms、切換步驟 */
+  /** Commit points: focus leaves, a 500 ms pause, switching steps */
   function flushPending() {
     clearTimeout(pendingTimer)
     pendingTimer = null
@@ -89,8 +89,8 @@ export function createStore(initialDoc, initialUI = {}) {
   }
 
   /**
-   * 重繪會移除有焦點的輸入框，Chrome 此時會同步送出 blur。
-   * 那不是使用者離開欄位，期間的 flush 不算提交，否則每打一個字就多一步復原。
+   * A re-render removes the focused input, and Chrome fires blur synchronously at that moment.
+   * That isn't the user leaving the field, so flushes during it don't commit; otherwise every keystroke would be its own undo step.
    */
   function holdFlush(fn) {
     flushHold += 1
@@ -127,7 +127,7 @@ export function createStore(initialDoc, initialUI = {}) {
     return true
   }
 
-  /** 載入範本或匯入檔案時重置歷史，不疊加（§5） */
+  /** Loading a template or importing a file resets history instead of stacking onto it (§5) */
   function replace(doc, { ui = {}, resetHistory = false } = {}) {
     flushPending()
     if (resetHistory) {
@@ -167,7 +167,7 @@ export function createStore(initialDoc, initialUI = {}) {
   }
 }
 
-/** 找出兩份文件間內容不同的步驟，供復原後閃爍高亮 */
+/** Find steps whose content differs between two documents, for flash highlighting after undo */
 function diffStepIds(before, after) {
   const map = (doc) => {
     const out = new Map()

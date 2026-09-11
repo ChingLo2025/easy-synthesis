@@ -1,9 +1,9 @@
-// 個人試劑庫：使用者輸入過的化合物自動存入，第二次使用可直接搜尋帶入。
-// 內建清單（reagents.js）只是種子。
+// Personal reagent library: compounds the user enters are saved automatically and can be searched the next time.
+// The built-in list (reagents.js) is only a seed.
 import { BUILTIN_REAGENTS, searchReagents } from './reagents.js'
 import { KEYS, load, save } from '../state/persist.js'
 
-/** 以名稱＋CAS 當作同一物質的判準 */
+/** Name + CAS identify the same substance */
 function signature(entry) {
   const cas = (entry.cas ?? '').trim()
   return cas ? `cas:${cas.toLowerCase()}` : `name:${(entry.name ?? '').trim().toLowerCase()}`
@@ -14,7 +14,7 @@ export function loadLibrary() {
   return Array.isArray(stored) ? stored : []
 }
 
-/** 記錄一筆化合物；同物質則更新欄位與使用次數 */
+/** Record a compound; for the same substance, update its fields and use count */
 export function rememberCompound(compound) {
   const name = (compound?.name ?? '').trim()
   if (!name) return loadLibrary()
@@ -53,8 +53,8 @@ export function forgetCompound(key) {
 }
 
 /**
- * 搜尋個人庫與內建庫，個人庫優先。
- * filter: 'drying' 只回乾燥劑、'solvent' 只回溶劑。
+ * Search the personal and built-in libraries, personal first.
+ * filter: 'drying' returns drying agents only, 'solvent' solvents only.
  */
 export function searchAll(query, { filter = null, limit = 12 } = {}) {
   const personal = loadLibrary().map((item) => ({ ...item, source: 'personal' }))

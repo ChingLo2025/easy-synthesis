@@ -21,7 +21,7 @@ function doc() {
 }
 const narrate = (d) => generateNarrative(d, compute(d))
 
-test('預溶溶劑另列一行計量，並計入反應槽溶劑', () => {
+test('the pre-dissolve solvent gets its own quantity row and counts toward reaction solvent', () => {
   const d = doc()
   d.steps = [createStep('add', { compoundId: 'A', amount: { mode: 'equiv', value: 1 }, dissolve: { solventId: 'THF', volume: 20 } })]
   const m = compute(d)
@@ -33,13 +33,25 @@ test('預溶溶劑另列一行計量，並計入反應槽溶劑', () => {
   assert.equal(formatVolume(m.solvent.reaction), '20 mL')
 })
 
-test('預溶未指定溶劑時提醒', () => {
+test('the Chinese narrative puts a space between English names and Chinese text', () => {
+  const d = doc()
+  d.compounds.push(createCompound({ id: 'MG', name: 'MgSO4 (anhydrous)', nameEn: 'MgSO4', role: 'reagent' }))
+  d.steps = [
+    createStep('add', { compoundId: 'A', amount: { mode: 'mass', value: 10 }, vessel: '250 mL round-bottom flask' }),
+    createStep('dry', { method: 'agent', agentId: 'MG' }),
+  ]
+  const zh = narrate(d).zh.join('')
+  assert.ok(zh.includes('於 250 mL round-bottom flask 中加入原料 A'), zh)
+  assert.ok(zh.includes('以 MgSO4 (anhydrous) 乾燥後過濾'), zh)
+})
+
+test('warns when the pre-dissolve solvent is not set', () => {
   const d = doc()
   d.steps = [createStep('add', { compoundId: 'A', amount: { mode: 'equiv', value: 1 }, dissolve: { solventId: null, volume: 20 } })]
   assert.ok(compute(d).warnings.some((w) => w.code === 'dissolve-solvent'))
 })
 
-test('預溶的敘述：中文「溶於…後緩慢滴入」，英文「a solution of … in …」', () => {
+test('pre-dissolve narrative: zh dissolves then adds dropwise, en "a solution of … in …"', () => {
   const d = doc()
   d.steps = [createStep('add', {
     compoundId: 'A', amount: { mode: 'mass', value: 10 }, dissolve: { solventId: 'THF', volume: 20 },
@@ -50,7 +62,7 @@ test('預溶的敘述：中文「溶於…後緩慢滴入」，英文「a soluti
   assert.match(n.en.join(' '), /A solution of Material A \(10\.0 g, 50\.0 mmol, 1\.0 eq\) in THF \(20 mL\) was added dropwise over 30 min/)
 })
 
-test('預溶的加料步驟不與前一個加料合併成「與」', () => {
+test('a pre-dissolved addition does not merge with the previous addition', () => {
   const d = doc()
   d.steps = [
     createStep('add', { compoundId: 'THF', amount: { mode: 'volume', value: 50 } }),
@@ -59,7 +71,7 @@ test('預溶的加料步驟不與前一個加料合併成「與」', () => {
   assert.doesNotMatch(narrate(d).zh.join(''), /與/)
 })
 
-test('緩慢升溫：中文與英文', () => {
+test('slow heating: Chinese and English', () => {
   const d = doc()
   d.steps = [createStep('stir', { atm: 'N2', temp: 80, time: 120, ramp: 'up', rampRate: 2 })]
   const n = narrate(d)
@@ -67,7 +79,7 @@ test('緩慢升溫：中文與英文', () => {
   assert.match(n.en.join(' '), /slowly heated to 80 °C \(2 °C\/min\) under nitrogen and stirred for 2 h/)
 })
 
-test('緩慢降溫沒填速率時省略括號', () => {
+test('slow cooling without a rate omits the parentheses', () => {
   const d = doc()
   d.steps = [createStep('stir', { temp: 0, time: 60, ramp: 'down' })]
   const n = narrate(d)
@@ -75,14 +87,14 @@ test('緩慢降溫沒填速率時省略括號', () => {
   assert.match(n.en.join(' '), /slowly cooled to 0 °C and stirred for 1 h/)
 })
 
-test('過濾不填洗液也不提醒缺化合物', () => {
+test('filtration without a rinse does not warn about a missing compound', () => {
   const d = doc()
   d.steps = [createStep('filter', { method: 'celite', kept: 'filtrate' })]
   assert.ok(!compute(d).warnings.some((w) => w.stepId === d.steps[0].id))
   assert.match(narrate(d).zh.join(''), /經矽藻土墊過濾，收集濾液。/)
 })
 
-test('過濾的濾餅洗液依洗滌次數計入總量', () => {
+test('the filter cake rinse counts toward the total by number of rinses', () => {
   const d = doc()
   d.steps = [createStep('filter', { method: 'vacuum', kept: 'solid', solventId: 'EtOH', amount: { mode: 'volume', value: 10 }, rinseCount: 2 })]
   assert.equal(formatVolume(compute(d).solvent.total), '20 mL')
@@ -91,7 +103,7 @@ test('過濾的濾餅洗液依洗滌次數計入總量', () => {
   assert.match(n.en.join(' '), /filter cake was washed with EtOH \(10 mL x 2\)/)
 })
 
-test('離心：轉速、時間、溫度與保留相', () => {
+test('centrifugation: speed, time, temperature and kept phase', () => {
   const d = doc()
   d.steps = [createStep('centrifuge', { speed: 4000, speedUnit: 'rpm', time: 10, temp: 4, kept: 'pellet' })]
   const n = narrate(d)
@@ -99,13 +111,13 @@ test('離心：轉速、時間、溫度與保留相', () => {
   assert.match(n.en.join(' '), /centrifuged at 4000 rpm for 10 min at 4 °C, and the pellet was collected/)
 })
 
-test('離心以 ×g 表示、保留上清液', () => {
+test('centrifugation in × g, keeping the supernatant', () => {
   const d = doc()
   d.steps = [createStep('centrifuge', { speed: 3000, speedUnit: 'g', time: 5, kept: 'supernatant' })]
   assert.match(narrate(d).zh.join(''), /以 3000 × g 離心 5 分鐘，收集上清液。/)
 })
 
-test('新欄位匯出再匯入不失真', () => {
+test('new fields survive export and re-import', () => {
   const d = doc()
   d.steps = [
     createStep('add', { compoundId: 'A', dissolve: { solventId: 'THF', volume: 20 } }),
@@ -117,7 +129,7 @@ test('新欄位匯出再匯入不失真', () => {
   assert.equal(serializeDocument(again), serializeDocument(d))
 })
 
-test('刪除化合物也會清掉預溶溶劑的參照', () => {
+test('deleting a compound also clears the pre-dissolve solvent reference', () => {
   const store = createStore(doc())
   const actions = createActions(store)
   actions.addStep('add')
@@ -127,7 +139,7 @@ test('刪除化合物也會清掉預溶溶劑的參照', () => {
   assert.equal(store.getState().doc.steps[0].dissolve.solventId, null)
 })
 
-test('步驟群組展開時，預溶溶劑也重新對應到本文件的化合物', () => {
+test('expanding a step group remaps the pre-dissolve solvent to compounds in this document', () => {
   const entry = {
     steps: [createStep('add', { compoundId: 'x1', dissolve: { solventId: 'x2', volume: 5 } })],
     compounds: [{ id: 'x1', name: '原料 A', cas: '' }, { id: 'x2', name: 'THF', cas: '' }],
@@ -138,19 +150,19 @@ test('步驟群組展開時，預溶溶劑也重新對應到本文件的化合�
   assert.equal(steps[0].dissolve.solventId, 'THF')
 })
 
-test('緩慢升溫搭配減壓時，中文也要寫出減壓', () => {
+test('slow heating under vacuum also mentions reduced pressure in Chinese', () => {
   const d = doc()
   d.steps = [createStep('stir', { ramp: 'up', temp: 80, rampRate: 2, special: ['vacuum'], time: 60 })]
   assert.match(narrate(d).zh.join(''), /緩慢升溫至 80 °C（2 °C\/min），攪拌 1 小時（減壓）/)
 })
 
-test('封管、超音波與轉速在中文敘述中不會漏掉', () => {
+test('sealed tube, sonication and rpm are not dropped from the Chinese narrative', () => {
   const d = doc()
   d.steps = [createStep('stir', { temp: 80, time: 120, rpm: 300, special: ['sealed', 'sonication'] })]
   assert.match(narrate(d).zh.join(''), /於封管中 80 °C 攪拌 2 小時（超音波輔助，300 rpm）/)
 })
 
-test('記住的預溶設定是複本：之後刪除化合物不會改到它', () => {
+test('remembered pre-dissolve settings are a copy: deleting a compound later does not change them', () => {
   const store = createStore(doc())
   const actions = createActions(store)
   actions.addStep('add')
@@ -160,13 +172,13 @@ test('記住的預溶設定是複本：之後刪除化合物不會改到它', ()
   assert.equal(recallDefaults('add', 'A').dissolve.solventId, 'THF')
 })
 
-test('矽藻土過濾並洗滌濾餅時，敘述寫「合併濾液」', () => {
+test('Celite filtration with a cake rinse says the filtrates are combined', () => {
   const d = doc()
   d.steps = [createStep('filter', { method: 'celite', kept: 'filtrate', solventId: 'EtOH', amount: { mode: 'volume', value: 10 }, rinseCount: 2 })]
   assert.match(narrate(d).zh.join(''), /經矽藻土墊過濾，濾餅以乙醇 \(10 mL x 2\) 洗滌，合併濾液。/)
 })
 
-test('濃縮沒填時間也沒勾至乾：只寫濃縮', () => {
+test('concentration without time or to-dryness just says concentrated', () => {
   const d = doc()
   d.steps = [createStep('evaporate', { method: 'rotary', temp: 40, pressure: 80 })]
   const n = narrate(d)
@@ -174,7 +186,7 @@ test('濃縮沒填時間也沒勾至乾：只寫濃縮', () => {
   assert.match(n.en.join(' '), /mixture was concentrated by rotary evaporation \(40 °C, 80 mbar\)/)
 })
 
-test('濃縮填了時間就寫出固定時間', () => {
+test('concentration with a time states the fixed time', () => {
   const d = doc()
   d.steps = [createStep('evaporate', { method: 'vacuum', temp: 40, time: 30 })]
   const n = narrate(d)
@@ -182,7 +194,7 @@ test('濃縮填了時間就寫出固定時間', () => {
   assert.match(n.en.join(' '), /concentrated by evaporation under vacuum \(40 °C, 30 min\)/)
 })
 
-test('勾選至乾才寫 to dryness', () => {
+test('to dryness is written only when checked', () => {
   const d = doc()
   d.steps = [createStep('evaporate', { method: 'rotary', temp: 40, toDryness: true })]
   const n = narrate(d)

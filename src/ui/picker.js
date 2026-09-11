@@ -1,5 +1,5 @@
-// 化合物選擇器：先列本文件既有化合物，再列個人庫與內建庫。
-// 選到庫中項目時回傳待建立的化合物，由呼叫端寫入文件。
+// Compound picker: this document's compounds first, then the personal and built-in libraries.
+// Picking a library item returns a compound to create; the caller writes it to the document.
 import { el, clear } from './dom.js'
 import { iconMarkup } from './icons.js'
 import { searchAll } from '../model/library.js'
@@ -7,10 +7,10 @@ import { reagentToCompound } from '../model/reagents.js'
 import { ROLES } from '../model/steps.js'
 
 /**
- * onPick({ compoundId }) 或 onPick({ create: {...} })
+ * onPick({ compoundId }) or onPick({ create: {...} })
  * filter: null | 'solvent' | 'drying'
  */
-export function compoundPicker({ doc, value, filter = null, placeholder = '選擇化合物', onPick }) {
+export function compoundPicker({ doc, value, filter = null, placeholder = 'Select compound', onPick }) {
   const current = doc.compounds.find((c) => c.id === value) ?? null
   const root = el('div', { class: 'picker' })
 
@@ -39,11 +39,11 @@ export function compoundPicker({ doc, value, filter = null, placeholder = '選�
     const list = el('div', { class: 'picker__list' })
     const search = el('input', {
       type: 'text',
-      placeholder: '搜尋名稱或 CAS…',
+      placeholder: 'Search name or CAS…',
       style: { marginBottom: '3px' },
       oninput: () => render(search.value),
       onkeydown: (event) => {
-        if (event.isComposing) return // 輸入法選字時按的 Enter 不算送出
+        if (event.isComposing) return // Enter pressed while choosing an IME candidate doesn't submit
         if (event.key === 'Escape') close()
         if (event.key === 'Enter') {
           event.preventDefault()
@@ -65,9 +65,9 @@ export function compoundPicker({ doc, value, filter = null, placeholder = '選�
         return !q || [c.name, c.cas].some((f) => (f ?? '').toLowerCase().includes(q))
       })
       if (inDoc.length) {
-        results.append(sectionLabel('本程序'))
+        results.append(sectionLabel('This procedure'))
         for (const compound of inDoc) {
-          results.append(option(compound.name || '（未命名）', compound.cas, ROLES[compound.role]?.label, () => {
+          results.append(option(compound.name || '(unnamed)', compound.cas, ROLES[compound.role]?.label, () => {
             onPick({ compoundId: compound.id })
             close()
           }))
@@ -77,10 +77,10 @@ export function compoundPicker({ doc, value, filter = null, placeholder = '選�
         (item) => !inDoc.some((c) => c.name === item.name && (c.cas || '') === (item.cas || '')),
       )
       if (library.length) {
-        results.append(sectionLabel('試劑庫'))
+        results.append(sectionLabel('Library'))
         for (const item of library) {
           const hint = [item.cas, item.bp ? `bp ${item.bp} °C` : null].filter(Boolean).join(' · ')
-          results.append(option(item.name, hint, item.source === 'personal' ? '個人' : '內建', () => {
+          results.append(option(item.name, hint, item.source === 'personal' ? 'Personal' : 'Built-in', () => {
             onPick({ create: reagentToCompound(item) })
             close()
           }))
@@ -88,13 +88,13 @@ export function compoundPicker({ doc, value, filter = null, placeholder = '選�
       }
       if (q && !inDoc.length && !library.length) {
         results.append(
-          option(`新增「${query}」`, '', '新化合物', () => {
+          option(`Add “${query}”`, '', 'New compound', () => {
             onPick({ create: { name: query, role: filter === 'solvent' ? 'solvent' : 'reactant' } })
             close()
           }),
         )
       }
-      if (!results.children.length) results.append(el('div', { class: 'picker__empty' }, '尚無化合物，請直接輸入名稱新增'))
+      if (!results.children.length) results.append(el('div', { class: 'picker__empty' }, 'No compounds yet. Type a name to add one'))
     }
 
     render('')

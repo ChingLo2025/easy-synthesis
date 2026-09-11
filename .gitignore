@@ -1,11 +1,11 @@
-# 規格與內部文件：不公開
+# Spec and internal docs: not public
 SPEC*.md
 
-# 依賴與產出
+# Dependencies and build output
 node_modules/
 *.log
 
-# 編輯器與作業系統
+# Editor and OS files
 .vscode/
 .idea/
 .DS_Store

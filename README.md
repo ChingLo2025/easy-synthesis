@@ -1,78 +1,81 @@
-# 合成實驗流程圖工具
+# Synthesis Flowchart
 
-整份合成程序是一份 JSON，流程圖、計量表、列印稿與中英文 Experimental section 都由它自動產生。
+A whole synthesis procedure is a single JSON document. The flow diagram, quantities table, printout, and the Chinese and English Experimental sections are all generated from it.
 
-線上使用：<https://chinglo2025.github.io/easy-synthesis/>
+Live: <https://chinglo2025.github.io/easy-synthesis/>
 
-## 執行
+## Run
 
 ```bash
 npm run dev     # http://localhost:5173
 npm test        # node --test
 ```
 
-沒有相依套件，也沒有建置步驟。ES modules 需要 http(s) 來源，本機請用 `npm run dev` 開啟，不要直接以 `file://` 開 `index.html`。
+No dependencies and no build step. ES modules need an http(s) origin, so run `npm run dev` locally instead of opening `index.html` via `file://`.
 
-## 目錄
+## Layout
 
 ```
-index.html            應用外框（三欄工作區）
+index.html            App shell (three-column workspace)
 styles/
-  base.css            設計 token、控制元件
-  layout.css          外框與面板
-  cards.css           步驟卡片、對話框、提示
-  flow.css            中軸線流程圖
-  table.css           文件、計量表、敘述
+  base.css            Design tokens, controls
+  layout.css          Shell and panels
+  cards.css           Step cards, dialogs, toasts
+  flow.css            Central-axis flow diagram
+  table.css           Document, quantities table, narrative
   print.css           @media print
 src/
   model/
-    units.js          SI 換算與格式化（內部 mol / kg / m³）
-    steps.js          九種步驟型別與列舉的中央定義
-    schema.js         建構、走訪、正規化、round-trip
-    reagents.js       內建試劑庫（33 溶劑／試劑 + 8 乾燥劑，含 CAS/MW/密度/沸點）
-    library.js        個人試劑庫（localStorage）
-    sample.js         範例程序
+    units.js          SI conversion and formatting (internally mol / kg / m³)
+    steps.js          Central definition of the nine step types and enums
+    schema.js         Construction, traversal, normalization, round-trip
+    reagents.js       Built-in reagent library (33 solvents/reagents + 8 drying agents, with CAS/MW/density/bp)
+    library.js        Personal reagent library (localStorage)
+    sample.js         Example procedure
     ids.js
   engine/
-    compute.js        純函數 (procedure) => (table, warnings)
+    compute.js        Pure function (procedure) => (table, warnings)
   state/
-    store.js          past[] / present / future[] 與合併規則
-    actions.js        所有文件變更
-    prefs.js          按鈕使用頻率、上次使用值
-    persist.js        localStorage 薄封裝
+    store.js          past[] / present / future[] and coalescing rules
+    actions.js        All document changes
+    prefs.js          Button usage frequency, last-used values
+    persist.js        Thin localStorage wrapper
   ui/
-    palette.js        左側九個模組、基準、範本入口
-    sequence.js       卡片序列、xN、分支、freeform、拖曳排序
-    editors.js        各型別欄位編輯器
-    fields.js         欄位小工具與條件按鈕
-    picker.js         化合物選擇器
-    flow.js           中軸線流程圖
-    metrics.js        計量表與總計
-    narrative.js      Experimental section（中英文）
-    document.js       文件面板組裝
-    modals.js         化合物、範本、命名對話框
-    icons.js          24x24 網格圖示（path 字串）
-    summary.js        步驟一行摘要
+    palette.js        Left panel: nine modules, basis, templates
+    sequence.js       Card sequence, xN, branches, freeform, drag-to-reorder
+    editors.js        Field editors per step type
+    editors-workup.js Filtration and centrifugation editors
+    editor-parts.js   Shared editor parts (amounts, derived values, pre-dissolve)
+    fields.js         Field widgets and quick condition buttons
+    picker.js         Compound picker
+    flow.js           Central-axis flow diagram
+    metrics.js        Quantities table and totals
+    narrative.js      Experimental section (Chinese and English)
+    document.js       Document panel assembly
+    modals.js         Compound, template and name dialogs
+    icons.js          24x24 grid icons (path strings)
+    summary.js        One-line step summaries
     dom.js / toast.js
   io/
-    json.js           匯入匯出、剪貼簿
-    templates.js      整份範本與步驟群組
-tools/serve.mjs       零依賴靜態伺服器（本機開發用）
-tests/                node:test 測試
+    json.js           Import/export, clipboard
+    templates.js      Procedure templates and step groups
+tools/serve.mjs       Zero-dependency static server (local development)
+tests/                node:test tests
 ```
 
-## 實作決定
+## Design decisions
 
-- **單位**：JSON 用實驗室慣用單位（g/mol、g/mL、mol/L），計算前一律轉 SI，顯示時再格式化。質量、莫耳數、當量至少保留一位小數（10 → 10.0），符合實驗記錄慣例。
-- **驅動欄位**：`amount.mode` 即驅動欄位，其餘三欄由引擎推導、以灰色顯示。沒有通用約束求解器。
-- **敘述合併**：連續且單純的加料步驟合併為一句（「加入 A 與 B」），其後的攪拌接在同一句；滴加、有 note 或 freeform 的步驟自成一句。是否留白逐步驟判定。
-- **留白標記**：有 note 的步驟英文版留白，有 freeform 的步驟中英文皆留白。中文標記為 `［步驟 N：手動輸入，待補寫］`，英文為 `[Step N: manual entry, to be written]`，兩者都加灰底；待補處歸零前，複製的純文字仍保留標記。
-- **列印**：列印目前顯示的分頁。流程圖與計量表在同一頁面上下排列，敘述為另一分頁。
-- **理論產量**：產物以選填的 `meta.product = { name, mw }` 設定（化合物對話框最下方）；沒有分子量時只顯示莫耳數。
-- **分歧深度**：軟性限制兩層。第三層無法建立，第二層會在「待確認」列出提示。
-- **按鈕頻率重排**：套用於條件按鈕（氣氛、溫度、時間、方法等）；左側九個模組維持固定順序，避免介面在使用中跳動。
-- **資料儲存**：目前程序、個人試劑庫、範本、群組、使用頻率都只存在瀏覽器的 localStorage，不會上傳，也不跨裝置同步。換裝置或清除瀏覽器資料前，請先匯出 JSON。
+- **Interface language**: the interface is in English. The Chinese Experimental section is still generated alongside the English one; it is output, not interface.
+- **Units**: JSON uses lab units (g/mol, g/mL, mol/L); everything is converted to SI before calculation and formatted again for display. Mass, moles and equivalents keep at least one decimal (10 → 10.0), following lab-notebook convention.
+- **Driving field**: `amount.mode` is the driving field; the other three columns are derived by the engine and shown in grey. There is no general constraint solver.
+- **Narrative merging**: consecutive simple additions merge into one sentence ("A and B were added"), and a following stir joins the same sentence. Dropwise additions and steps with a note or freeform text get their own sentence. Blanking is decided per step.
+- **Blank markers**: a step with a note is left blank in English; a step with freeform text is left blank in both languages. The Chinese marker is `［步驟 N：手動輸入，待補寫］` and the English one is `[Step N: manual entry, to be written]`, both on a grey background. Until nothing is pending, copied plain text keeps the markers.
+- **Printing**: prints the current tab. The flow diagram and quantities table are stacked on one page; the narrative is a separate tab.
+- **Theoretical yield**: the product is set via the optional `meta.product = { name, mw }` (bottom of the compounds dialog); without a MW only moles are shown.
+- **Branch depth**: soft limit of two levels. A third level can't be created; the second level is flagged under "To review".
+- **Frequency ordering**: applies to quick condition buttons (atmosphere, temperature, time, method, etc.); the nine modules on the left keep a fixed order so the interface doesn't jump around.
+- **Storage**: the current procedure, personal reagent library, templates, groups and usage frequencies live only in the browser's localStorage. Nothing is uploaded or synced across devices. Export JSON before switching devices or clearing browser data.
 
-## 目前不支援
+## Not supported yet
 
-規模重算、單行速記輸入、分批加料、計畫值／實際值雙欄、結構式繪製、匯流（多股料合併為一步）、範圍與公差、安全警告、自由畫布拖放、條件迴圈、多人協作。
+Scale recalculation, one-line shorthand entry, portion-wise addition, planned vs actual columns, structure drawing, stream merging (several feeds into one step), ranges and tolerances, safety warnings, free-canvas drag and drop, conditional loops, multi-user collaboration.

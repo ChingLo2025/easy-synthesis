@@ -1,5 +1,5 @@
-// 所有文件變更集中於此，UI 只負責呼叫。
-// 結構性變動（增刪、排序、改 xN）立即各成一筆歷史；欄位輸入以 key 合併。
+// All document changes live here; the UI only calls them.
+// Structural changes (add/remove, reorder, xN) are each their own history entry right away; field input merges by key.
 import { createBranch, createCompound, createStep, findStep, locateStep, mapCompoundRefs, walkSteps } from '../model/schema.js'
 import { uid } from '../model/ids.js'
 import { MAX_BRANCH_DEPTH } from '../model/steps.js'
@@ -20,7 +20,7 @@ export function createActions(store) {
     return step
   }
 
-  /** 分支上限 2 層（§2）；超過時由呼叫端提示改為另開一份程序 */
+  /** Branches are capped at 2 levels (§2); beyond that the caller suggests a separate procedure */
   function branchList(doc, parentId) {
     const hit = findStep(doc, parentId)
     if (!hit) return null
@@ -55,7 +55,7 @@ export function createActions(store) {
     }, patch.mode ? structural : { key: `${stepId}:amount` })
   }
 
-  /** 預溶：patch 為 null 表示改回直接加入 */
+  /** Pre-dissolve: a null patch means back to direct addition */
   function updateDissolve(stepId, patch, { key = null } = {}) {
     const current = findStep(store.getState().doc, stepId)?.step
     if (!current) return
@@ -140,7 +140,7 @@ export function createActions(store) {
     }, structural)
   }
 
-  // ── 化合物 ───────────────────────────────────────────────────────────
+  // ── Compounds ───────────────────────────────────────────────────────────
   function addCompound(fields = {}) {
     const compound = createCompound(fields)
     store.transact((doc) => {
@@ -157,11 +157,11 @@ export function createActions(store) {
       const compound = doc.compounds.find((c) => c.id === id)
       if (compound) Object.assign(compound, patch)
     }, key ? { key: `${id}:${key}` } : structural)
-    // 逐字輸入時不寫入個人庫，否則每個前綴（M、Me、MeO…）都會各成一筆；等欄位提交再記
+    // Don't write to the personal library while typing char by char, or every prefix (M, Me, MeO…) becomes an entry; record when the field commits
     if (!key) commitCompound(id)
   }
 
-  /** 欄位提交（blur）時把化合物記進個人庫 */
+  /** When the field commits (blur), record the compound in the personal library */
   function commitCompound(id) {
     const compound = store.getState().doc.compounds.find((c) => c.id === id)
     if (compound?.name?.trim()) rememberCompound(compound)
@@ -197,7 +197,7 @@ export function createActions(store) {
   }
 }
 
-// 記住上次使用值的欄位（§5：同型別、同化合物的欄位，預設帶入上次使用值）
+// Fields whose last-used value is remembered (§5: fields of the same type and compound default to the last-used value)
 const REMEMBERED_FIELDS = {
   add: ['addMode', 'duration', 'rate', 'tempMax', 'vessel'],
   stir: ['atm', 'temp', 'time', 'rpm', 'special'],
@@ -210,7 +210,7 @@ const REMEMBERED_FIELDS = {
   monitor: ['method', 'interval', 'criteria'],
 }
 
-// 只在「同型別＋同化合物」時帶入：某試劑習慣先溶於 THF，不代表每次加料都要預溶
+// Only recalled for "same type + same compound": pre-dissolving one reagent in THF doesn't mean every addition should be pre-dissolved
 const COMPOUND_FIELDS = {
   add: ['dissolve'],
 }
@@ -230,7 +230,7 @@ function rememberStepDefaults(step) {
   rememberDefaults(step.type, compoundId, { ...payload, ...own })
 }
 
-/** 新值與現值相同就略過：重複點同一顆按鈕、change 事件補送，都不該多出一步復原或清掉重做 */
+/** Skip when the new value equals the current one: re-clicking the same button or a late change event must not add an undo step or clear redo */
 function isNoop(target, patch) {
   if (!target) return true
   return Object.entries(patch).every(
@@ -256,7 +256,7 @@ function cloneWithNewIds(step) {
   return copy
 }
 
-/** 防止把步驟拖進自己的分支而造成孤兒 */
+/** Prevent dragging a step into its own branch, which would orphan it */
 function isAncestor(doc, ancestorId, nodeId) {
   const hit = findStep(doc, ancestorId)
   if (!hit) return false

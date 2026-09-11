@@ -1,4 +1,4 @@
-// 文件面板：上半流程圖、下半計量表、頁尾簽名欄；另一分頁為 Experimental section。
+// Document panel: flow diagram on top, quantities table below, signature footer; the other tab is the Experimental section.
 import { el, clear } from './dom.js'
 import { iconMarkup } from './icons.js'
 import { renderFlow } from './flow.js'
@@ -6,7 +6,7 @@ import { renderMetrics, renderWarnings } from './metrics.js'
 import { generateNarrative, isMarker, narrativeToText } from './narrative.js'
 
 export const DOC_TABS = [
-  { id: 'flow', label: '流程圖與計量表', icon: 'flow' },
+  { id: 'flow', label: 'Flow & quantities', icon: 'flow' },
   { id: 'text', label: 'Experimental', icon: 'text' },
 ]
 
@@ -17,10 +17,10 @@ export function renderDocument(host, { doc, metrics, tab, selectedId, onSelectSt
   if (tab === 'text') {
     host.append(narrativeSection(doc, metrics, onCopy))
   } else {
-    host.append(section('流程圖', `${countSteps(doc)} 個步驟`, renderFlow(doc, metrics, { selectedId, onSelect: onSelectStep })))
-    host.append(section('計量表', metrics.basis.compound ? `基準：${metrics.basis.compound.name}` : '尚未設定基準', renderMetrics(doc, metrics)))
+    host.append(section('Flow diagram', `${countSteps(doc)} steps`, renderFlow(doc, metrics, { selectedId, onSelect: onSelectStep })))
+    host.append(section('Quantities', metrics.basis.compound ? `Basis: ${metrics.basis.compound.name}` : 'No basis set', renderMetrics(doc, metrics)))
     const warnings = renderWarnings(metrics)
-    if (warnings) host.append(section('待確認', `${metrics.warnings.length} 項`, warnings))
+    if (warnings) host.append(section('To review', `${metrics.warnings.length} items`, warnings))
   }
 
   host.append(footer(doc))
@@ -29,12 +29,12 @@ export function renderDocument(host, { doc, metrics, tab, selectedId, onSelectSt
 function titleBlock(doc) {
   const meta = doc.meta ?? {}
   const bits = [
-    meta.author ? `操作者 ${meta.author}` : null,
-    meta.batchNo ? `批號 ${meta.batchNo}` : null,
+    meta.author ? `Operator ${meta.author}` : null,
+    meta.batchNo ? `Batch ${meta.batchNo}` : null,
     meta.date || null,
   ].filter(Boolean)
   return el('div', { class: 'doc-title' }, [
-    el('h1', {}, meta.title || '未命名程序'),
+    el('h1', {}, meta.title || 'Untitled procedure'),
     bits.length ? el('div', { class: 'doc-title__meta' }, bits.map((text) => el('span', {}, text))) : null,
   ])
 }
@@ -53,20 +53,20 @@ function narrativeSection(doc, metrics, onCopy) {
   const pending = narrative.pending
     ? el('div', { class: 'narrative__pending' }, [
         el('span', { html: iconMarkup('warning', { size: 14 }) }),
-        el('span', {}, `待補寫 ${narrative.pending} 處（中文 ${narrative.pendingZh}、英文 ${narrative.pendingEn}）`),
+        el('span', {}, `${narrative.pending} to be written (Chinese ${narrative.pendingZh}, English ${narrative.pendingEn})`),
       ])
     : el('div', { class: 'narrative__pending', style: { color: 'var(--separate)', background: 'var(--separate-soft)', borderColor: 'var(--separate-line)' } }, [
         el('span', { html: iconMarkup('check', { size: 14 }) }),
-        el('span', {}, '沒有待補處'),
+        el('span', {}, 'Nothing pending'),
       ])
 
   wrap.append(el('div', { class: 'doc-section__head' }, [
     el('h3', {}, 'Experimental section'),
-    el('small', {}, '由結構化資料套模板生成'),
+    el('small', {}, 'Generated from structured data via templates'),
     el('span', { style: { marginLeft: 'auto' } }, pending),
   ]))
 
-  wrap.append(block('中文', narrative.zh, 'zh', onCopy))
+  wrap.append(block('Chinese', narrative.zh, 'zh', onCopy))
   wrap.append(block('English', narrative.en, 'en', onCopy))
   return wrap
 }
@@ -74,10 +74,10 @@ function narrativeSection(doc, metrics, onCopy) {
 function block(label, sentences, lang, onCopy) {
   const text = el('p', { class: `narrative__text${lang === 'en' ? ' narrative__text--en' : ''}` })
   if (!sentences.length) {
-    text.append(el('span', { class: 'muted' }, '尚無內容'))
+    text.append(el('span', { class: 'muted' }, 'No content yet'))
   }
   for (const sentence of sentences) {
-    // 留白標記加灰底，視覺上明確非最終稿
+    // Blank markers get a grey background so they are clearly not final text
     text.append(isMarker(sentence) ? el('span', { class: 'blank-marker' }, sentence) : document.createTextNode(sentence))
     if (lang === 'en') text.append(document.createTextNode(' '))
   }
@@ -89,20 +89,20 @@ function block(label, sentences, lang, onCopy) {
         type: 'button',
         style: { height: '22px', fontSize: '11.5px' },
         onclick: () => onCopy?.(narrativeToText(sentences, lang), sentences.some(isMarker)),
-      }, [el('span', { html: iconMarkup('copy', { size: 13 }) }), el('span', {}, '複製純文字')]),
+      }, [el('span', { html: iconMarkup('copy', { size: 13 }) }), el('span', {}, 'Copy plain text')]),
     ]),
     text,
   ])
 }
 
-/** 頁尾：批號、日期、操作者、簽名欄 */
+/** Footer: batch no., date, operator, signature */
 function footer(doc) {
   const meta = doc.meta ?? {}
   const cells = [
-    ['批號', meta.batchNo],
-    ['日期', meta.date],
-    ['操作者', meta.author],
-    ['簽名', ''],
+    ['Batch no.', meta.batchNo],
+    ['Date', meta.date],
+    ['Operator', meta.author],
+    ['Signature', ''],
   ]
   return el('footer', { class: 'doc-footer' }, cells.map(([label, value]) =>
     el('div', { class: 'doc-footer__cell' }, [

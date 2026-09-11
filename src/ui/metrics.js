@@ -1,5 +1,5 @@
-// 計量表：各步驟 mol / g / mL / equiv 四欄，依 role 分組。
-// 驅動欄位為使用者輸入，其餘三欄為推導值，以灰色顯示。
+// Quantities table: mol / g / mL / equiv per step, grouped by role.
+// The driving field is user input; the other three columns are derived and shown in grey.
 import { el } from './dom.js'
 import { iconMarkup } from './icons.js'
 import { ROLES } from '../model/steps.js'
@@ -15,14 +15,14 @@ const COLUMNS = [
 export function renderMetrics(doc, metrics) {
   const wrap = el('div', { style: { display: 'flex', flexDirection: 'column', gap: '14px' } })
   if (!metrics.rows.some((row) => row.compound)) {
-    wrap.append(el('div', { class: 'flow__empty' }, '尚無可計量的步驟。加入物質後這裡會自動生成計量表。'))
+    wrap.append(el('div', { class: 'flow__empty' }, 'Nothing to quantify yet. The table fills in automatically once you add materials.'))
     return wrap
   }
 
   const table = el('table', { class: 'metrics' })
   table.append(el('thead', {}, el('tr', {}, [
-    el('th', {}, '化合物'),
-    el('th', {}, '步驟'),
+    el('th', {}, 'Compound'),
+    el('th', {}, 'Step'),
     ...COLUMNS.map(([, unit]) => el('th', {}, unit)),
   ])))
 
@@ -39,7 +39,7 @@ export function renderMetrics(doc, metrics) {
 
 function dataRows(row) {
   const rows = [dataRow(row, { copy: 0 })]
-  // 列印時展開為 N 列
+  // Expanded into N rows when printing
   for (let index = 1; index < row.repeat; index += 1) rows.push(dataRow(row, { copy: index }))
   return rows
 }
@@ -63,7 +63,7 @@ function dataRow(row, { copy }) {
     el('td', {}, [
       el('span', { class: 'metrics__no' }, row.number + (row.repeat > 1 ? ` (${copy + 1}/${row.repeat})` : '')),
       row.branchLabel ? el('small', { class: 'muted' }, row.branchLabel) : null,
-      row.part === 'dissolve' ? el('small', { class: 'muted' }, ' 預溶') : null,
+      row.part === 'dissolve' ? el('small', { class: 'muted' }, ' pre-dissolve') : null,
       row.repeat > 1 && copy === 0 ? el('span', { class: 'metrics__repeat screen-only' }, `x${row.repeat}`) : null,
     ]),
     ...cells,
@@ -93,21 +93,21 @@ function driverMatches(driver, key) {
 function totals(doc, metrics) {
   const cards = []
   if (metrics.solvent.reaction !== null) {
-    cards.push(totalCard('反應槽溶劑', formatVolume(metrics.solvent.reaction), '判斷反應槽容積用'))
+    cards.push(totalCard('Reaction solvent', formatVolume(metrics.solvent.reaction), 'For sizing the vessel'))
   }
   if (metrics.solvent.total !== null) {
-    cards.push(totalCard('溶劑總用量', formatVolume(metrics.solvent.total), '含後處理'))
+    cards.push(totalCard('Total solvent', formatVolume(metrics.solvent.total), 'Incl. workup'))
   }
   if (metrics.basis.ok) {
-    cards.push(totalCard('基準莫耳數', formatAmount(metrics.basis.n), metrics.basis.compound?.name ?? ''))
+    cards.push(totalCard('Basis moles', formatAmount(metrics.basis.n), metrics.basis.compound?.name ?? ''))
   }
   if (metrics.theoretical.n !== null) {
     const value = metrics.theoretical.mass !== null
       ? formatMass(metrics.theoretical.mass)
       : formatAmount(metrics.theoretical.n)
-    cards.push(totalCard('理論產量', value, metrics.theoretical.hasProduct
-      ? metrics.theoretical.name || '以基準物 100% 轉化計'
-      : '設定產物分子量後可換算質量'))
+    cards.push(totalCard('Theoretical yield', value, metrics.theoretical.hasProduct
+      ? metrics.theoretical.name || 'Assuming 100% conversion of the basis'
+      : 'Set the product MW to get mass'))
   }
   return el('div', { class: 'totals' }, cards)
 }

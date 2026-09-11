@@ -1,5 +1,5 @@
-// 步驟序列：卡片列表、展開編輯、xN、分支、freeform、拖曳排序。
-// 點擊左側模組即追加到末尾；拖曳僅用於既有步驟的重新排序（§5）。
+// Step sequence: card list, expanded editing, xN, branches, freeform, drag-to-reorder.
+// Clicking a module on the left appends to the end; dragging only reorders existing steps (§5).
 import { el, clear } from './dom.js'
 import { iconMarkup } from './icons.js'
 import { renderEditor } from './editors.js'
@@ -23,9 +23,9 @@ export function createSequence({ root, store, actions, getMetrics }) {
 
     if (!doc.steps.length) {
       root.append(el('div', { class: 'sequence__empty' }, [
-        '左側點擊模組即可加入步驟。',
+        'Click a module on the left to add a step.',
         el('br'),
-        '先設定基準物與基準量，當量才會算。',
+        'Set the basis compound and amount first so equivalents can be calculated.',
       ]))
       return
     }
@@ -73,11 +73,11 @@ export function createSequence({ root, store, actions, getMetrics }) {
       },
     })
 
-    // 只有把手可拖曳，卡片內的輸入框才不會一碰就變成拖曳
+    // Only the handle is draggable, so touching an input inside the card doesn't start a drag
     const handle = el('span', {
       class: 'card__handle',
       draggable: 'true',
-      title: '拖曳排序',
+      title: 'Drag to reorder',
       html: iconMarkup('drag', { size: 16 }),
       ondragstart: (event) => {
         dragId = step.id
@@ -117,11 +117,11 @@ export function createSequence({ root, store, actions, getMetrics }) {
       el('span', { class: 'card__icon', html: iconMarkup(meta.icon) }),
       el('span', { class: 'card__title' }, [
         el('span', { class: 'card__name' }, meta.label),
-        el('span', { class: 'card__summary' }, summary || '尚未填寫'),
+        el('span', { class: 'card__summary' }, summary || 'Not filled in'),
       ]),
       el('span', { class: 'card__tools' }, [
-        toolButton('copy', '複製步驟', () => actions.duplicateStep(step.id)),
-        toolButton('trash', '刪除步驟', () => actions.removeStep(step.id), 'btn--danger'),
+        toolButton('copy', 'Duplicate step', () => actions.duplicateStep(step.id)),
+        toolButton('trash', 'Delete step', () => actions.removeStep(step.id), 'btn--danger'),
       ]),
     ])
   }
@@ -140,30 +140,30 @@ export function createSequence({ root, store, actions, getMetrics }) {
     return body
   }
 
-  /** freeform 取代整組模板欄位；清空後模板欄位自動恢復（§2） */
+  /** freeform replaces all template fields; clearing it brings them back (§2) */
   function freeformBlock(step) {
     const area = el('textarea', {
       name: 'freeform',
       value: step.freeform ?? '',
-      placeholder: '直接描述這個步驟的特殊條件…',
+      placeholder: 'Describe the special conditions of this step…',
       ...onTextInput((freeform) => actions.updateStep(step.id, { freeform }, { key: 'freeform' })),
       onblur: () => store.flush(),
     })
     return el('div', { class: 'freeform' }, [
       el('div', { class: 'freeform__head' }, [
-        el('span', {}, '手動輸入（取代模板欄位）'),
+        el('span', {}, 'Manual entry (replaces template fields)'),
         el('button', {
           class: 'btn btn--ghost',
           type: 'button',
           onclick: () => actions.toggleFreeform(step.id, false),
-        }, '改回模板'),
+        }, 'Back to template'),
       ]),
       area,
-      el('div', { class: 'module__hint' }, '此步驟的中英文敘述皆會留白待補。'),
+      el('div', { class: 'module__hint' }, 'Both the Chinese and English narrative will be left blank for this step.'),
     ])
   }
 
-  /** note 為附註型，原樣插入中文敘述，不影響輸出 */
+  /** note is an annotation inserted verbatim into the Chinese narrative; it doesn't affect the output otherwise */
   function noteRow(step) {
     return el('div', { class: 'note-row' }, [
       el('span', { html: iconMarkup('note', { size: 15 }) }),
@@ -171,7 +171,7 @@ export function createSequence({ root, store, actions, getMetrics }) {
         type: 'text',
         name: 'note',
         value: step.note ?? '',
-        placeholder: '補充說明（附加於中文敘述之後）',
+        placeholder: 'Note (appended to the Chinese narrative)',
         ...onTextInput((note) => actions.updateStep(step.id, { note }, { key: 'note' })),
         onblur: () => store.flush(),
       }),
@@ -182,33 +182,33 @@ export function createSequence({ root, store, actions, getMetrics }) {
     const canBranch = depth < MAX_BRANCH_DEPTH && !step.branch
     return el('div', { class: 'card__chips', style: { justifyContent: 'space-between' } }, [
       el('div', { class: 'card__chips' }, [
-        el('span', { class: 'card__chips-label' }, '重複'),
+        el('span', { class: 'card__chips-label' }, 'Repeat'),
         el('button', { class: 'chip', type: 'button', onclick: () => actions.setRepeat(step.id, (step.repeat ?? 1) - 1) }, '−'),
         el('span', { class: 'num', style: { minWidth: '18px', textAlign: 'center' } }, `x${step.repeat ?? 1}`),
         el('button', { class: 'chip', type: 'button', onclick: () => actions.setRepeat(step.id, (step.repeat ?? 1) + 1) }, '+'),
       ]),
       el('div', { class: 'card__chips' }, [
         step.freeform === null
-          ? el('button', { class: 'chip', type: 'button', onclick: () => actions.toggleFreeform(step.id, true) }, '手動輸入')
+          ? el('button', { class: 'chip', type: 'button', onclick: () => actions.toggleFreeform(step.id, true) }, 'Manual entry')
           : null,
         el('button', {
           class: 'chip',
           type: 'button',
           disabled: !canBranch,
-          title: canBranch ? '在此步驟後開一條支流' : `分歧深度上限 ${MAX_BRANCH_DEPTH} 層`,
+          title: canBranch ? 'Start a branch after this step' : `Branch depth limit: ${MAX_BRANCH_DEPTH} levels`,
           onclick: () => {
             if (!canBranch) {
-              toast(`分歧深度上限 ${MAX_BRANCH_DEPTH} 層，請改為另開一份程序`, { tone: 'warn', icon: 'warning' })
+              toast(`Branch depth is limited to ${MAX_BRANCH_DEPTH} levels; start a separate procedure instead`, { tone: 'warn', icon: 'warning' })
               return
             }
             actions.startBranch(step.id)
           },
-        }, [el('span', { html: iconMarkup('branch', { size: 14 }) }), el('span', {}, '分支')]),
+        }, [el('span', { html: iconMarkup('branch', { size: 14 }) }), el('span', {}, 'Branch')]),
       ]),
     ])
   }
 
-  /** 分支：遞迴使用同一套卡片與渲染規則 */
+  /** Branches: recursively reuse the same cards and rendering rules */
   function branchBlock(step, ctx) {
     const branch = step.branch
     const block = el('div', { class: 'branch-block' })
@@ -218,14 +218,14 @@ export function createSequence({ root, store, actions, getMetrics }) {
         type: 'text',
         name: 'branchLabel',
         value: branch.label ?? '',
-        placeholder: '支流名稱（水層、送測…）',
+        placeholder: 'Branch name (aqueous layer, for analysis…)',
         ...onTextInput((label) => actions.setBranchLabel(step.id, label)),
         onblur: () => store.flush(),
       }),
       el('button', {
         class: 'btn btn--ghost btn--icon',
         type: 'button',
-        title: '移除整條支流',
+        title: 'Remove the whole branch',
         onclick: () => actions.removeBranch(step.id),
         html: iconMarkup('close', { size: 14 }),
       }),
@@ -243,7 +243,7 @@ export function createSequence({ root, store, actions, getMetrics }) {
       el('button', {
         class: 'chip',
         type: 'button',
-        title: `在支流加入「${STEP_TYPES[type].label}」`,
+        title: `Add ${STEP_TYPES[type].label} to the branch`,
         onclick: () => actions.addStep(type, { parentId }),
       }, [
         el('span', { html: iconMarkup(STEP_TYPES[type].icon, { size: 15 }) }),
