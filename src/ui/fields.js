@@ -12,10 +12,25 @@ export function toNumber(value) {
 }
 
 /**
+ * 文字輸入事件。組字中（注音、倉頡等）的 input 不送出，等 compositionend 才更新：
+ * 全量重繪會換掉輸入框，組字途中重繪會讓輸入法的候選字整段消失。
+ */
+export function onTextInput(handler) {
+  return {
+    oninput: (event) => {
+      if (!event.isComposing) handler(event.target.value)
+    },
+    oncompositionend: (event) => handler(event.target.value),
+    // 保險：萬一瀏覽器沒送 compositionend，離開欄位時仍會提交；值沒變時由 actions 略過
+    onchange: (event) => handler(event.target.value),
+  }
+}
+
+/**
  * 數值輸入一律用 type="text" + inputmode="decimal"。
  * type="number" 在輸入 "0." 這類中間狀態時會把值清成空字串，游標與內容都會跳掉。
  */
-export function numberInput({ value, placeholder = '', onInput, onBlur }) {
+export function numberInput({ value, placeholder = '', name = null, onInput, onBlur }) {
   return el('input', {
     type: 'text',
     class: 'num',
@@ -23,7 +38,8 @@ export function numberInput({ value, placeholder = '', onInput, onBlur }) {
     autocomplete: 'off',
     value: value ?? '',
     placeholder,
-    oninput: (event) => onInput(toNumber(event.target.value)),
+    name,
+    ...onTextInput((text) => onInput(toNumber(text))),
     onblur: onBlur,
   })
 }
@@ -32,16 +48,17 @@ export function field(label, control) {
   return el('div', { class: 'field' }, [label ? el('span', { class: 'field__label' }, label) : null, control])
 }
 
-export function numberField(label, { value, onInput, onBlur, placeholder = '', suffix = '' }) {
-  return field(suffix ? `${label}（${suffix}）` : label, numberInput({ value, placeholder, onInput, onBlur }))
+export function numberField(label, { value, onInput, onBlur, placeholder = '', suffix = '', name = null }) {
+  return field(suffix ? `${label}（${suffix}）` : label, numberInput({ value, placeholder, name, onInput, onBlur }))
 }
 
-export function textField(label, { value, onInput, onBlur, placeholder = '' }) {
+export function textField(label, { value, onInput, onBlur, placeholder = '', name = null }) {
   return field(label, el('input', {
     type: 'text',
     value: value ?? '',
     placeholder,
-    oninput: (event) => onInput(event.target.value),
+    name,
+    ...onTextInput(onInput),
     onblur: onBlur,
   }))
 }

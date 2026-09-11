@@ -119,3 +119,26 @@ test('移除分支後編號重新連號', () => {
   actions.removeBranch(parent.id)
   assert.deepEqual([...numberSteps(doc().steps).values()], ['1', '2'])
 })
+
+test('內容沒變的修改不進歷史，也不清掉重做', () => {
+  const { actions, doc, store } = setup()
+  actions.addStep('stir')
+  const id = doc().steps[0].id
+  actions.updateStep(id, { temp: 25 })
+  store.undo()
+  const depth = store.historyDepth.past
+  actions.updateStep(id, { temp: doc().steps[0].temp })
+  assert.equal(store.historyDepth.past, depth)
+  assert.equal(store.getState().canRedo, true)
+})
+
+test('在 x1 按減號、重點同一顆條件按鈕、寫回相同標題，都不會多出復原步驟', () => {
+  const { actions, doc, store } = setup()
+  actions.addStep('stir')
+  const id = doc().steps[0].id
+  const depth = store.historyDepth.past
+  actions.setRepeat(id, 0)
+  actions.updateStep(id, { atm: doc().steps[0].atm })
+  actions.setMeta({ title: doc().meta.title })
+  assert.equal(store.historyDepth.past, depth)
+})

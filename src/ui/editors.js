@@ -1,7 +1,7 @@
 // 每個步驟型別的欄位編輯器。所有型別皆可切換為 freeform 手動輸入（由卡片外殼處理）。
 import { el } from './dom.js'
 import { compoundPicker } from './picker.js'
-import { chipRow, field, numberField, numberInput, row, selectField, textField } from './fields.js'
+import { chipRow, field, numberField, numberInput, onTextInput, row, selectField, textField } from './fields.js'
 import {
   AMOUNT_MODES, ATMOSPHERES, DRY_METHODS, EVAPORATE_METHODS,
   MONITOR_METHODS, PHASES, STIR_SPECIALS,
@@ -30,9 +30,10 @@ function addEditor(step, ctx) {
       })),
       field('容器', el('input', {
         type: 'text',
+        name: 'vessel',
         value: step.vessel ?? '',
         placeholder: '250 mL 圓底燒瓶',
-        oninput: (event) => actions.updateStep(step.id, { vessel: event.target.value }, { key: 'vessel' }),
+        ...onTextInput((vessel) => actions.updateStep(step.id, { vessel }, { key: 'vessel' })),
         onblur: () => store.flush(),
       })),
     ]),
@@ -46,17 +47,17 @@ function addEditor(step, ctx) {
   if (step.addMode === 'dropwise') {
     parts.push(row([
       numberField('滴加時間', {
-        value: step.duration, suffix: 'min',
+        name: 'duration', value: step.duration, suffix: 'min',
         onInput: (value) => actions.updateStep(step.id, { duration: value }, { key: 'duration' }),
         onBlur: () => store.flush(),
       }),
       numberField('速率', {
-        value: step.rate, suffix: 'mL/min',
+        name: 'rate', value: step.rate, suffix: 'mL/min',
         onInput: (value) => actions.updateStep(step.id, { rate: value }, { key: 'rate' }),
         onBlur: () => store.flush(),
       }),
       numberField('溫控上限', {
-        value: step.tempMax, suffix: '°C',
+        name: 'tempMax', value: step.tempMax, suffix: '°C',
         onInput: (value) => actions.updateStep(step.id, { tempMax: value }, { key: 'tempMax' }),
         onBlur: () => store.flush(),
       }),
@@ -74,17 +75,17 @@ function stirEditor(step, ctx) {
   return [
     row([
       numberField('溫度', {
-        value: step.temp, suffix: '°C',
+        name: 'temp', value: step.temp, suffix: '°C',
         onInput: (value) => actions.updateStep(step.id, { temp: value }, { key: 'temp' }),
         onBlur: () => store.flush(),
       }),
       numberField('時間', {
-        value: step.time, suffix: 'min',
+        name: 'time', value: step.time, suffix: 'min',
         onInput: (value) => actions.updateStep(step.id, { time: value }, { key: 'time' }),
         onBlur: () => store.flush(),
       }),
       numberField('轉速', {
-        value: step.rpm, suffix: 'rpm',
+        name: 'rpm', value: step.rpm, suffix: 'rpm',
         onInput: (value) => actions.updateStep(step.id, { rpm: value }, { key: 'rpm' }),
         onBlur: () => store.flush(),
       }),
@@ -150,12 +151,12 @@ function evaporateEditor(step, ctx) {
     })), (item) => actions.updateStep(step.id, { method: item.id }), { namespace: 'evapMethod' }),
     row([
       numberField('水浴溫度', {
-        value: step.temp, suffix: '°C',
+        name: 'temp', value: step.temp, suffix: '°C',
         onInput: (value) => actions.updateStep(step.id, { temp: value }, { key: 'temp' }),
         onBlur: () => store.flush(),
       }),
       numberField('壓力', {
-        value: step.pressure, suffix: 'mbar',
+        name: 'pressure', value: step.pressure, suffix: 'mbar',
         onInput: (value) => actions.updateStep(step.id, { pressure: value }, { key: 'pressure' }),
         onBlur: () => store.flush(),
       }),
@@ -179,12 +180,12 @@ function dryEditor(step, ctx) {
   }
   parts.push(row([
     numberField('溫度', {
-      value: step.temp, suffix: '°C',
+      name: 'temp', value: step.temp, suffix: '°C',
       onInput: (value) => actions.updateStep(step.id, { temp: value }, { key: 'temp' }),
       onBlur: () => store.flush(),
     }),
     numberField('時間', {
-      value: step.time, suffix: 'min',
+      name: 'time', value: step.time, suffix: 'min',
       onInput: (value) => actions.updateStep(step.id, { time: value }, { key: 'time' }),
       onBlur: () => store.flush(),
     }),
@@ -197,7 +198,7 @@ function monitorEditor(step, ctx) {
   const { actions, store } = ctx
   const missingInterval = step.interval === null || step.interval === undefined
   const intervalField = numberField('取樣間隔（必填）', {
-    value: step.interval, suffix: 'min',
+    name: 'interval', value: step.interval, suffix: 'min',
     onInput: (value) => actions.updateStep(step.id, { interval: value }, { key: 'interval' }),
     onBlur: () => store.flush(),
   })
@@ -210,6 +211,7 @@ function monitorEditor(step, ctx) {
     row([
       intervalField,
       textField('終點判定', {
+        name: 'criteria',
         value: step.criteria,
         placeholder: '原料點消失',
         onInput: (value) => actions.updateStep(step.id, { criteria: value }, { key: 'criteria' }),
@@ -249,6 +251,7 @@ function amountBlock(step, ctx, compound) {
   ))
 
   const input = numberInput({
+    name: 'amount',
     value: step.amount?.value,
     placeholder: AMOUNT_MODES[mode].unit,
     onInput: (value) => actions.updateAmount(step.id, { value }),

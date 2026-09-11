@@ -43,6 +43,7 @@ export function compoundPicker({ doc, value, filter = null, placeholder = '選�
       style: { marginBottom: '3px' },
       oninput: () => render(search.value),
       onkeydown: (event) => {
+        if (event.isComposing) return // 輸入法選字時按的 Enter 不算送出
         if (event.key === 'Escape') close()
         if (event.key === 'Enter') {
           event.preventDefault()

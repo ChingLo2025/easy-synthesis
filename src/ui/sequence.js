@@ -3,6 +3,7 @@
 import { el, clear } from './dom.js'
 import { iconMarkup } from './icons.js'
 import { renderEditor } from './editors.js'
+import { onTextInput } from './fields.js'
 import { stepSummary } from './summary.js'
 import { STEP_TYPES, STEP_ORDER, MAX_BRANCH_DEPTH } from '../model/steps.js'
 import { numberSteps } from '../model/schema.js'
@@ -50,6 +51,7 @@ export function createSequence({ root, store, actions, getMetrics }) {
       dataset: {
         family: meta.family,
         stepId: step.id,
+        scope: step.id,
         selected: String(selected),
         freeform: String(Boolean(step.freeform)),
         flash: String(flash.includes(step.id)),
@@ -141,9 +143,10 @@ export function createSequence({ root, store, actions, getMetrics }) {
   /** freeform 取代整組模板欄位；清空後模板欄位自動恢復（§2） */
   function freeformBlock(step) {
     const area = el('textarea', {
+      name: 'freeform',
       value: step.freeform ?? '',
       placeholder: '直接描述這個步驟的特殊條件…',
-      oninput: (event) => actions.updateStep(step.id, { freeform: event.target.value }, { key: 'freeform' }),
+      ...onTextInput((freeform) => actions.updateStep(step.id, { freeform }, { key: 'freeform' })),
       onblur: () => store.flush(),
     })
     return el('div', { class: 'freeform' }, [
@@ -166,9 +169,10 @@ export function createSequence({ root, store, actions, getMetrics }) {
       el('span', { html: iconMarkup('note', { size: 15 }) }),
       el('input', {
         type: 'text',
+        name: 'note',
         value: step.note ?? '',
         placeholder: '補充說明（附加於中文敘述之後）',
-        oninput: (event) => actions.updateStep(step.id, { note: event.target.value }, { key: 'note' }),
+        ...onTextInput((note) => actions.updateStep(step.id, { note }, { key: 'note' })),
         onblur: () => store.flush(),
       }),
     ])
@@ -208,13 +212,14 @@ export function createSequence({ root, store, actions, getMetrics }) {
   function branchBlock(step, ctx) {
     const branch = step.branch
     const block = el('div', { class: 'branch-block' })
-    block.append(el('div', { class: 'branch-block__head' }, [
+    block.append(el('div', { class: 'branch-block__head', dataset: { scope: `${step.id}:branch` } }, [
       el('span', { html: iconMarkup('branch', { size: 15 }) }),
       el('input', {
         type: 'text',
+        name: 'branchLabel',
         value: branch.label ?? '',
         placeholder: '支流名稱（水層、送測…）',
-        oninput: (event) => actions.setBranchLabel(step.id, event.target.value),
+        ...onTextInput((label) => actions.setBranchLabel(step.id, label)),
         onblur: () => store.flush(),
       }),
       el('button', {

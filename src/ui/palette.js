@@ -68,6 +68,7 @@ export function createPalette({ root, store, actions, onOpenCompounds, onOpenTem
     })
 
     const amount = numberInput({
+      name: 'basisAmount',
       value: basis.amount,
       placeholder: '基準量',
       onInput: (value) => actions.setBasis({ amount: value }),
@@ -78,7 +79,7 @@ export function createPalette({ root, store, actions, onOpenCompounds, onOpenTem
       onchange: (event) => actions.setBasis({ unit: event.target.value }),
     }, BASIS_UNITS.map((u) => el('option', { value: u, selected: basis.unit === u }, u)))
 
-    return group('基準', el('div', { style: { display: 'grid', gap: '6px' } }, [
+    return group('基準', el('div', { style: { display: 'grid', gap: '6px' }, dataset: { scope: 'basis' } }, [
       picker,
       el('div', { style: { display: 'grid', gridTemplateColumns: '1fr 74px', gap: '6px' } }, [amount, unit]),
       el('div', { class: 'module__hint', style: { padding: '0 2px' } }, '所有當量以此為分母'),

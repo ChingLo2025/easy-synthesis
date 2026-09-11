@@ -1,8 +1,10 @@
 // 使用習慣：按鈕順序依使用頻率自動重排；同型別、同化合物的欄位帶入上次使用值。
-import { KEYS, load, save } from './persist.js'
+import { KEYS, load, save, throttledSave } from './persist.js'
 
 let frequency = null
 let lastUsed = null
+// 逐字輸入時也會呼叫；寫入 localStorage 延後到停頓之後
+const saveLastUsed = throttledSave(KEYS.lastUsed)
 
 function freq() {
   if (!frequency) frequency = load(KEYS.frequency, {}) ?? {}
@@ -44,7 +46,7 @@ function defaultsKey(type, compoundId) {
 export function rememberDefaults(type, compoundId, fields) {
   const table = recent()
   table[defaultsKey(type, compoundId)] = { ...(table[defaultsKey(type, compoundId)] ?? {}), ...fields }
-  save(KEYS.lastUsed, table)
+  saveLastUsed(table)
 }
 
 /** 取回預設值：化合物專屬優先，其次型別通用 */

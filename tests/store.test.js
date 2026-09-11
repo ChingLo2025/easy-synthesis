@@ -96,3 +96,20 @@ test('介面狀態不進入歷史', () => {
   store.setUI({ selectedId: 'a' })
   assert.equal(store.getState().canUndo, false)
 })
+
+test('重繪期間的 flush（Chrome 移除有焦點欄位時送出的 blur）不打斷同欄位合併', () => {
+  const store = newStore()
+  store.transact((doc) => { doc.steps[0].temp = 21 }, { key: 'a:temp' })
+  store.holdFlush(() => store.flush())
+  store.transact((doc) => { doc.steps[0].temp = 22 }, { key: 'a:temp' })
+  assert.equal(store.historyDepth.past, 1)
+})
+
+test('重繪以外的 flush（真的離開欄位）照常提交', () => {
+  const store = newStore()
+  store.transact((doc) => { doc.steps[0].temp = 21 }, { key: 'a:temp' })
+  store.holdFlush(() => {})
+  store.flush()
+  store.transact((doc) => { doc.steps[0].temp = 22 }, { key: 'a:temp' })
+  assert.equal(store.historyDepth.past, 2)
+})

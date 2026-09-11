@@ -10,8 +10,9 @@ import { createSequence } from './ui/sequence.js'
 import { DOC_TABS, renderDocument } from './ui/document.js'
 import { compoundsModal, initModals, promptModal, templatesModal } from './ui/modals.js'
 import { initToaster, toast } from './ui/toast.js'
-import { append, el, clear } from './ui/dom.js'
+import { append, clear, el, replaceChildren } from './ui/dom.js'
 import { iconMarkup } from './ui/icons.js'
+import { onTextInput } from './ui/fields.js'
 import { copyText, downloadDocument, pickDocument } from './io/json.js'
 import {
   deleteGroup, deleteTemplate, expandGroup, listGroups, listTemplates,
@@ -73,21 +74,24 @@ function render(reason) {
   metrics = compute(doc)
 
   const focus = captureFocus()
-  palette.render()
-  sequence.render()
-  renderMeta(doc)
-  renderTopActions()
-  renderTabs(ui.tab)
-  renderDocument(nodes.document, {
-    doc,
-    metrics,
-    tab: ui.tab ?? 'flow',
-    selectedId: ui.selectedId,
-    onSelectStep: (stepId) => store.setUI({ selectedId: stepId }),
-    onCopy: handleCopy,
+  // 重建 DOM 期間，被移除的焦點欄位送出的 blur 不算提交（見 store.holdFlush）
+  store.holdFlush(() => {
+    palette.render()
+    sequence.render()
+    syncMeta(doc, { force: reason !== 'change' })
+    renderTopActions()
+    renderTabs(ui.tab)
+    renderDocument(nodes.document, {
+      doc,
+      metrics,
+      tab: ui.tab ?? 'flow',
+      selectedId: ui.selectedId,
+      onSelectStep: (stepId) => store.setUI({ selectedId: stepId }),
+      onCopy: handleCopy,
+    })
+    renderStatus()
+    restoreFocus(focus, { keepRaw: reason === 'change' })
   })
-  renderStatus()
-  restoreFocus(focus)
 
   if (reason === 'undo' || reason === 'redo') {
     nodes.sequencePanel.scrollTop = ui.scrollTop ?? 0
@@ -97,42 +101,73 @@ function render(reason) {
   autosave(doc)
 }
 
-/** 全量重繪會讓輸入中的欄位失焦，這裡把焦點與游標位置接回去 */
+/**
+ * 全量重繪會換掉輸入框，這裡記下焦點位置，重繪後接回去。
+ * 在 data-scope（步驟卡、支流、基準）範圍內找：有 name 的欄位以名稱定位，
+ * 按鈕等沒有 name 的元素以順序定位，並比對種類與文字。
+ * 找不到同一個元素就不接，寧可失焦，也不把焦點或內容放進別的欄位。
+ */
 function captureFocus() {
   const active = document.activeElement
-  const container = [nodes.palette, nodes.sequence, nodes.document].find((node) => node?.contains(active))
-  if (!container || active === document.body) return null
-  const index = focusables(container).indexOf(active)
-  if (index < 0) return null
-  let selection = null
-  try {
-    selection = { start: active.selectionStart, end: active.selectionEnd }
-  } catch {
-    selection = null
+  if (!active || active === document.body) return null
+  const container = [nodes.palette, nodes.sequence, nodes.document].find((node) => node.contains(active))
+  if (!container) return null
+  const scopeNode = active.closest('[data-scope]')
+  const scope = scopeNode && container.contains(scopeNode) ? scopeNode.dataset.scope : null
+  return {
+    container,
+    scope,
+    name: active.getAttribute('name'),
+    index: focusables(scope ? scopeNode : container).indexOf(active),
+    signature: signatureOf(active),
+    raw: active.value,
+    selection: readSelection(active),
   }
-  const raw = typeof active.value === 'string' ? active.value : null
-  return { container, index, selection, raw }
 }
 
-function restoreFocus(snapshot) {
+function restoreFocus(snapshot, { keepRaw = false } = {}) {
   if (!snapshot) return
-  const node = focusables(snapshot.container)[snapshot.index]
-  if (!node) return
+  const root = snapshot.scope
+    ? snapshot.container.querySelector(`[data-scope="${CSS.escape(snapshot.scope)}"]`)
+    : snapshot.container
+  if (!root) return
+  const node = snapshot.name
+    ? root.querySelector(`[name="${CSS.escape(snapshot.name)}"]`)
+    : focusables(root)[snapshot.index]
+  if (!node || signatureOf(node) !== snapshot.signature) return
   node.focus({ preventScroll: true })
-  // 使用者正在輸入的原字串優先於模型格式化後的值
-  if (snapshot.raw !== null && typeof node.value === 'string' && node.value !== snapshot.raw) {
-    node.value = snapshot.raw
-  }
-  if (!snapshot.selection) return
+  if (!isTextual(node)) return
+  // 打字中保留使用者的原字串（例如 "0."）；復原、重做時以模型值為準，游標放到最後
+  if (keepRaw && node.value !== snapshot.raw) node.value = snapshot.raw
+  const end = node.value.length
+  const selection = keepRaw && snapshot.selection ? snapshot.selection : { start: end, end }
   try {
-    node.setSelectionRange(snapshot.selection.start, snapshot.selection.end)
+    node.setSelectionRange(selection.start, selection.end)
   } catch {
-    /* number input 不支援選取範圍，忽略 */
+    /* 不支援選取範圍的欄位，忽略 */
   }
 }
 
-function focusables(container) {
-  return [...container.querySelectorAll('input, textarea, select, button, [tabindex]')]
+/** 元素種類、名稱與按鈕文字（或提示）；簽名相同才視為同一個元素 */
+function signatureOf(node) {
+  const label = node.tagName === 'BUTTON' ? node.textContent.trim() || node.title : ''
+  return [node.tagName, node.type ?? '', node.getAttribute('name') ?? '', label].join('|')
+}
+
+function readSelection(node) {
+  try {
+    return typeof node.selectionStart === 'number' ? { start: node.selectionStart, end: node.selectionEnd } : null
+  } catch {
+    return null
+  }
+}
+
+function isTextual(node) {
+  return node.tagName === 'TEXTAREA' || (node.tagName === 'INPUT' && node.type === 'text')
+}
+
+function focusables(root) {
+  return [...root.querySelectorAll('input, textarea, select, button, [tabindex]')]
 }
 
 function flashHint(reason) {
@@ -143,24 +178,37 @@ function flashHint(reason) {
 }
 
 // ── 頂列 ─────────────────────────────────────────────────────────────────
-function renderMeta(doc) {
-  clear(nodes.meta)
-  const meta = doc.meta ?? {}
-  const input = (key, placeholder, className) => el('input', {
-    type: key === 'date' ? 'date' : 'text',
+// 頂列欄位只建立一次；重繪時只同步數值，不重建使用者正在輸入的欄位
+const META_FIELDS = [
+  { key: 'title', placeholder: '未命名程序', className: 'meta-input--title' },
+  { key: 'author', placeholder: '操作者', className: 'meta-input--sm' },
+  { key: 'batchNo', placeholder: '批號', className: 'meta-input--sm' },
+  { key: 'date', placeholder: '', className: 'meta-input--sm', type: 'date' },
+]
+
+function mountMeta() {
+  const inputs = new Map(META_FIELDS.map(({ key, placeholder, className, type = 'text' }) => [key, el('input', {
+    type,
     class: `meta-input ${className}`,
-    value: meta[key] ?? '',
     placeholder,
-    oninput: (event) => actions.setMeta({ [key]: event.target.value }, { key: `meta:${key}` }),
+    ...onTextInput((value) => actions.setMeta({ [key]: value }, { key: `meta:${key}` })),
     onblur: () => store.flush(),
-  })
-  nodes.meta.append(
-    input('title', '未命名程序', 'meta-input--title'),
-    el('span', { class: 'sep' }),
-    input('author', '操作者', 'meta-input--sm'),
-    input('batchNo', '批號', 'meta-input--sm'),
-    input('date', '', 'meta-input--sm'),
-  )
+  })]))
+  replaceChildren(nodes.meta, [
+    inputs.get('title'), el('span', { class: 'sep' }), inputs.get('author'), inputs.get('batchNo'), inputs.get('date'),
+  ])
+  return inputs
+}
+
+/** 輸入中的欄位不覆寫；復原、重做、載入範本時才強制同步 */
+function syncMeta(doc, { force = false } = {}) {
+  const meta = doc.meta ?? {}
+  for (const [key, input] of metaInputs) {
+    const value = meta[key] ?? ''
+    if (input.value === value) continue
+    if (!force && input === document.activeElement) continue
+    input.value = value
+  }
 }
 
 function renderTopActions() {
@@ -319,6 +367,7 @@ nodes.sequencePanel?.addEventListener('scroll', () => {
   store.setUI({ scrollTop: nodes.sequencePanel.scrollTop }, { silent: true })
 }, { passive: true })
 
+const metaInputs = mountMeta()
 store.subscribe((_state, reason) => render(reason))
 render('init')
 

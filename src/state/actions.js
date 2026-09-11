@@ -35,6 +35,7 @@ export function createActions(store) {
   }
 
   function updateStep(stepId, patch, { key = null } = {}) {
+    if (isNoop(findStep(store.getState().doc, stepId)?.step, patch)) return
     store.transact((doc) => {
       const hit = findStep(doc, stepId)
       if (!hit) return
@@ -44,6 +45,8 @@ export function createActions(store) {
   }
 
   function updateAmount(stepId, patch) {
+    const current = findStep(store.getState().doc, stepId)?.step
+    if (!current || isNoop(current.amount ?? {}, patch)) return
     store.transact((doc) => {
       const hit = findStep(doc, stepId)
       if (!hit) return
@@ -108,6 +111,7 @@ export function createActions(store) {
   }
 
   function setBranchLabel(stepId, label) {
+    if (findStep(store.getState().doc, stepId)?.step.branch?.label === label) return
     store.transact((doc) => {
       const hit = findStep(doc, stepId)
       if (hit?.step.branch) hit.step.branch.label = label
@@ -140,12 +144,19 @@ export function createActions(store) {
   }
 
   function updateCompound(id, patch, { key = null } = {}) {
+    if (isNoop(store.getState().doc.compounds.find((c) => c.id === id), patch)) return
     store.transact((doc) => {
       const compound = doc.compounds.find((c) => c.id === id)
       if (compound) Object.assign(compound, patch)
     }, key ? { key: `${id}:${key}` } : structural)
+    // 逐字輸入時不寫入個人庫，否則每個前綴（M、Me、MeO…）都會各成一筆；等欄位提交再記
+    if (!key) commitCompound(id)
+  }
+
+  /** 欄位提交（blur）時把化合物記進個人庫 */
+  function commitCompound(id) {
     const compound = store.getState().doc.compounds.find((c) => c.id === id)
-    if (compound?.name) rememberCompound(compound)
+    if (compound?.name?.trim()) rememberCompound(compound)
   }
 
   function removeCompound(id) {
@@ -161,6 +172,7 @@ export function createActions(store) {
   }
 
   function setBasis(patch) {
+    if (isNoop(store.getState().doc.basis, patch)) return
     const isStructural = 'compoundId' in patch || 'unit' in patch
     store.transact((doc) => {
       doc.basis = { ...doc.basis, ...patch }
@@ -168,6 +180,7 @@ export function createActions(store) {
   }
 
   function setMeta(patch, { key = 'meta' } = {}) {
+    if (isNoop(store.getState().doc.meta, patch)) return
     store.transact((doc) => {
       doc.meta = { ...doc.meta, ...patch }
     }, { key })
@@ -176,7 +189,7 @@ export function createActions(store) {
   return {
     addStep, updateStep, updateAmount, setRepeat, removeStep, duplicateStep, moveStep,
     toggleFreeform, startBranch, setBranchLabel, removeBranch, canBranch,
-    addCompound, updateCompound, removeCompound, setBasis, setMeta,
+    addCompound, updateCompound, commitCompound, removeCompound, setBasis, setMeta,
   }
 }
 
@@ -201,6 +214,14 @@ function rememberStepDefaults(step) {
   rememberDefaults(step.type, null, payload)
   const compoundId = step.compoundId ?? step.solventId ?? step.agentId ?? null
   if (compoundId) rememberDefaults(step.type, compoundId, payload)
+}
+
+/** 新值與現值相同就略過：重複點同一顆按鈕、change 事件補送，都不該多出一步復原或清掉重做 */
+function isNoop(target, patch) {
+  if (!target) return true
+  return Object.entries(patch).every(
+    ([field, value]) => target[field] === value || JSON.stringify(target[field]) === JSON.stringify(value),
+  )
 }
 
 function sanitizeDefaults(type, defaults) {

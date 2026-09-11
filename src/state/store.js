@@ -18,6 +18,7 @@ export function createStore(initialDoc, initialUI = {}) {
   let pendingKey = null
   let pendingTimer = null
   let flash = []
+  let flushHold = 0
 
   function snapshot(doc, ui) {
     return { doc: cloneDocument(doc), ui: { ...ui } }
@@ -87,6 +88,23 @@ export function createStore(initialDoc, initialUI = {}) {
     pendingKey = null
   }
 
+  /**
+   * 重繪會移除有焦點的輸入框，Chrome 此時會同步送出 blur。
+   * 那不是使用者離開欄位，期間的 flush 不算提交，否則每打一個字就多一步復原。
+   */
+  function holdFlush(fn) {
+    flushHold += 1
+    try {
+      return fn()
+    } finally {
+      flushHold -= 1
+    }
+  }
+
+  function flush() {
+    if (!flushHold) flushPending()
+  }
+
   function undo() {
     flushPending()
     if (!past.length) return false
@@ -140,7 +158,8 @@ export function createStore(initialDoc, initialUI = {}) {
     undo,
     redo,
     replace,
-    flush: flushPending,
+    flush,
+    holdFlush,
     clearFlash,
     get historyDepth() {
       return { past: past.length, future: future.length }

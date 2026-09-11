@@ -3,7 +3,7 @@ import { el, clear } from './dom.js'
 import { iconMarkup } from './icons.js'
 import { ROLES, ROLE_ORDER, STEP_TYPES } from '../model/steps.js'
 import { compoundPicker } from './picker.js'
-import { numberInput } from './fields.js'
+import { numberInput, onTextInput } from './fields.js'
 
 let host = null
 
@@ -66,7 +66,7 @@ export function promptModal({ title, label, value = '', confirmText = '儲存', 
   })
   input.focus()
   input.onkeydown = (event) => {
-    if (event.key === 'Enter') submit()
+    if (event.key === 'Enter' && !event.isComposing) submit()
   }
 }
 
@@ -116,18 +116,20 @@ export function compoundsModal({ store, actions, onChange }) {
 
   function compoundRow(compound, doc) {
     const isBasis = doc.basis.compoundId === compound.id
-    const text = (field, placeholder, width) => el('input', {
+    // 名稱逐字輸入時不寫入個人庫，欄位提交（blur）才記
+    const commit = () => { store.flush(); actions.commitCompound(compound.id); onChange?.() }
+    const text = (field, placeholder) => el('input', {
       type: 'text',
       value: compound[field] ?? '',
       placeholder,
-      oninput: (event) => actions.updateCompound(compound.id, { [field]: event.target.value }, { key: field }),
-      onblur: () => { store.flush(); onChange?.() },
+      ...onTextInput((value) => actions.updateCompound(compound.id, { [field]: value }, { key: field })),
+      onblur: commit,
     })
     const number = (field, placeholder) => numberInput({
       value: compound[field],
       placeholder,
       onInput: (value) => actions.updateCompound(compound.id, { [field]: value }, { key: field }),
-      onBlur: () => { store.flush(); onChange?.() },
+      onBlur: commit,
     })
 
     return el('div', { class: 'compound-row', dataset: { basis: String(isBasis) } }, [
@@ -164,7 +166,7 @@ export function compoundsModal({ store, actions, onChange }) {
         style: { width: '200px' },
         value: product.name ?? '',
         placeholder: '產物名稱',
-        oninput: (event) => patch({ name: event.target.value }),
+        ...onTextInput((name) => patch({ name })),
         onblur: () => { store.flush(); onChange?.() },
       }),
       applyWidth(numberInput({
