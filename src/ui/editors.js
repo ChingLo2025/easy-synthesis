@@ -1,13 +1,13 @@
 // 每個步驟型別的欄位編輯器。所有型別皆可切換為 freeform 手動輸入（由卡片外殼處理）。
 import { el } from './dom.js'
 import { compoundPicker } from './picker.js'
-import { chipRow, field, numberField, numberInput, onTextInput, row, selectField, textField } from './fields.js'
+import { chipRow, field, numberField, onTextInput, row, selectField, textField } from './fields.js'
+import { amountBlock, derivedStrip, dissolveFields, pickCompound } from './editor-parts.js'
+import { centrifugeEditor, filterEditor } from './editors-workup.js'
 import {
-  AMOUNT_MODES, ATMOSPHERES, DRY_METHODS, EVAPORATE_METHODS,
-  MONITOR_METHODS, PHASES, STIR_SPECIALS,
+  ATMOSPHERES, DRY_METHODS, EVAPORATE_METHODS,
+  MONITOR_METHODS, PHASES, RAMPS, STIR_SPECIALS,
 } from '../model/steps.js'
-import { formatAmount, formatEquiv, formatMass, formatVolume, isNum } from '../model/units.js'
-import { recallDefaults } from '../state/prefs.js'
 
 const TEMP_PRESETS = [0, 25, 40, 60, 80, 100]
 const TIME_PRESETS = [15, 30, 60, 120, 720]
@@ -42,7 +42,11 @@ function addEditor(step, ctx) {
       { id: 'once', label: '一次加入', active: step.addMode === 'once' },
       { id: 'dropwise', label: '滴加', active: step.addMode === 'dropwise' },
     ], (item) => actions.updateStep(step.id, { addMode: item.id }), { namespace: 'addMode' }),
+    chipRow('預溶', [
+      { id: 'dissolve', label: '先溶於溶劑再加入', active: Boolean(step.dissolve) },
+    ], () => actions.updateDissolve(step.id, step.dissolve ? null : {}), { rank: false, namespace: 'dissolve' }),
   ]
+  if (step.dissolve) parts.push(dissolveFields(step, ctx))
 
   if (step.addMode === 'dropwise') {
     parts.push(row([
@@ -74,7 +78,7 @@ function stirEditor(step, ctx) {
   const specials = step.special ?? []
   return [
     row([
-      numberField('溫度', {
+      numberField(step.ramp ? '目標溫度' : '溫度', {
         name: 'temp', value: step.temp, suffix: '°C',
         onInput: (value) => actions.updateStep(step.id, { temp: value }, { key: 'temp' }),
         onBlur: () => store.flush(),
@@ -96,6 +100,16 @@ function stirEditor(step, ctx) {
     chipRow('溫度', TEMP_PRESETS.map((value) => ({
       id: `t${value}`, label: `${value} °C`, value, active: step.temp === value,
     })), (item) => actions.updateStep(step.id, { temp: item.value }), { namespace: 'temp' }),
+    chipRow('升降溫', Object.entries(RAMPS).map(([id, meta]) => ({
+      id, label: meta.label, active: step.ramp === id,
+    })), (item) => actions.updateStep(step.id, { ramp: step.ramp === item.id ? null : item.id }), { rank: false, namespace: 'ramp' }),
+    step.ramp ? row([
+      numberField(RAMPS[step.ramp].rateLabel, {
+        name: 'rampRate', value: step.rampRate, suffix: '°C/min', placeholder: '選填',
+        onInput: (value) => actions.updateStep(step.id, { rampRate: value }, { key: 'rampRate' }),
+        onBlur: () => store.flush(),
+      }),
+    ], { tight: true }) : null,
     chipRow('時間', TIME_PRESETS.map((value) => ({
       id: `m${value}`, label: labelMinutes(value), value, active: step.time === value,
     })), (item) => actions.updateStep(step.id, { time: item.value }), { namespace: 'time' }),
@@ -105,7 +119,7 @@ function stirEditor(step, ctx) {
       const next = specials.includes(item.id) ? specials.filter((s) => s !== item.id) : [...specials, item.id]
       actions.updateStep(step.id, { special: next })
     }, { namespace: 'special' }),
-  ]
+  ].filter(Boolean)
 }
 
 // ── 萃取 / 水洗 ────────────────────────────────────────────────────────────
@@ -160,7 +174,15 @@ function evaporateEditor(step, ctx) {
         onInput: (value) => actions.updateStep(step.id, { pressure: value }, { key: 'pressure' }),
         onBlur: () => store.flush(),
       }),
+      numberField('時間', {
+        name: 'time', value: step.time, suffix: 'min', placeholder: '選填',
+        onInput: (value) => actions.updateStep(step.id, { time: value }, { key: 'time' }),
+        onBlur: () => store.flush(),
+      }),
     ], { tight: true }),
+    chipRow('終點', [
+      { id: 'dry', label: '抽至乾', active: Boolean(step.toDryness) },
+    ], () => actions.updateStep(step.id, { toDryness: !step.toDryness }), { rank: false, namespace: 'toDryness' }),
   ]
 }
 
@@ -226,97 +248,14 @@ const EDITORS = {
   stir: stirEditor,
   extract: extractEditor,
   wash: washEditor,
+  filter: filterEditor,
+  centrifuge: centrifugeEditor,
   evaporate: evaporateEditor,
   dry: dryEditor,
   monitor: monitorEditor,
 }
 
 // ── 共用零件 ───────────────────────────────────────────────────────────────
-
-/** 計量按鈕即 amount.mode 的切換，各模式共用同一組數值欄位 */
-function amountBlock(step, ctx, compound) {
-  const { actions, store } = ctx
-  const isSolvent = compound?.role === 'solvent' || compound?.role === 'quench'
-  const modes = ['mass', 'volume', 'equiv', 'mol%', ...(isSolvent ? ['vol_per_g'] : [])]
-  const mode = step.amount?.mode ?? 'equiv'
-
-  const switcher = el('div', { class: 'modes' }, modes.map((id) =>
-    el('button', {
-      class: 'mode',
-      type: 'button',
-      'aria-pressed': mode === id ? 'true' : 'false',
-      title: AMOUNT_MODES[id].hint,
-      onclick: () => actions.updateAmount(step.id, { mode: id }),
-    }, AMOUNT_MODES[id].label),
-  ))
-
-  const input = numberInput({
-    name: 'amount',
-    value: step.amount?.value,
-    placeholder: AMOUNT_MODES[mode].unit,
-    onInput: (value) => actions.updateAmount(step.id, { value }),
-    onBlur: () => store.flush(),
-  })
-
-  return el('div', { style: { display: 'flex', gap: '8px', alignItems: 'flex-end', flexWrap: 'wrap' } }, [
-    field('計量', switcher),
-    el('div', { class: 'field', style: { flex: '1 1 110px' } }, [
-      el('span', { class: 'field__label' }, AMOUNT_MODES[mode].unit),
-      input,
-    ]),
-  ])
-}
-
-/** 推導值：驅動欄位以外的三欄為灰色，不可直接編輯 */
-function derivedStrip(metrics, step) {
-  const strip = el('div', { class: 'derived' })
-  if (!metrics) return strip
-  const driver = step.amount?.mode ?? null
-  const cells = [
-    ['mass', 'm', formatMass(metrics.mass)],
-    ['volume', 'V', formatVolume(metrics.volume)],
-    ['n', 'n', formatAmount(metrics.n)],
-    ['equiv', 'eq', metrics.equiv === null ? null : formatEquiv(metrics.equiv)],
-  ]
-  for (const [key, label, text] of cells) {
-    const isDriver = driver === key || (driver === 'mol%' && key === 'equiv') || (driver === 'vol_per_g' && key === 'volume')
-    strip.append(el('span', { class: 'derived__item', dataset: { driver: String(isDriver) } }, [
-      el('span', {}, label),
-      el('b', {}, text ?? '—'),
-    ]))
-  }
-  if (metrics.repeat > 1) {
-    strip.append(el('span', { class: 'derived__item' }, [
-      el('span', {}, `x${metrics.repeat} 合計`),
-      el('b', {}, formatVolume(metrics.totalVolume) ?? formatMass(metrics.totalMass) ?? '—'),
-    ]))
-  }
-  for (const note of metrics.incomplete ?? []) {
-    strip.append(el('span', { class: 'derived__item derived__warn' }, note))
-  }
-  return strip
-}
-
-/** 選定化合物後，帶入同型別、同化合物的上次使用值（只填目前還空著的欄位） */
-function pickCompound(ctx, stepId, fieldName, choice) {
-  const { actions, step } = ctx
-  const compoundId = choice.compoundId ?? actions.addCompound(choice.create).id
-  const patch = { [fieldName]: compoundId }
-  const remembered = recallDefaults(step.type, compoundId)
-
-  for (const [field, value] of Object.entries(remembered)) {
-    if (field === 'amountMode') continue
-    if (isEmpty(step[field])) patch[field] = value
-  }
-  if (remembered.amountMode && !isNum(step.amount?.value)) {
-    patch.amount = { ...(step.amount ?? {}), mode: remembered.amountMode }
-  }
-  actions.updateStep(stepId, patch)
-}
-
-function isEmpty(value) {
-  return value === null || value === undefined || value === '' || (Array.isArray(value) && !value.length)
-}
 
 function labelMinutes(value) {
   if (value >= 60 && value % 60 === 0) return `${value / 60} h`

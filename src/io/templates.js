@@ -1,6 +1,6 @@
 // 兩層範本：整份程序範本（連化合物清單一併帶入），以及步驟群組。
 import { KEYS, load, save } from '../state/persist.js'
-import { cloneDocument, normalizeDocument, walkSteps } from '../model/schema.js'
+import { cloneDocument, mapCompoundRefs, normalizeDocument, walkSteps } from '../model/schema.js'
 import { uid } from '../model/ids.js'
 
 export function listTemplates() {
@@ -44,9 +44,10 @@ export function listGroups() {
 export function saveGroup(name, steps, compounds = []) {
   const list = listGroups()
   const used = new Set()
-  steps.forEach((step) => walkSteps([step], (node) => {
-    for (const field of ['compoundId', 'solventId', 'agentId']) if (node[field]) used.add(node[field])
-  }))
+  steps.forEach((step) => walkSteps([step], (node) => mapCompoundRefs(node, (ref) => {
+    used.add(ref)
+    return ref
+  })))
   const entry = {
     id: uid('grp'),
     name: name.trim() || '未命名群組',
@@ -84,9 +85,7 @@ export function expandGroup(entry, doc) {
   const steps = structuredClone(entry.steps)
   steps.forEach((step) => walkSteps([step], (node) => {
     node.id = uid('s')
-    for (const field of ['compoundId', 'solventId', 'agentId']) {
-      if (node[field]) node[field] = idMap.get(node[field]) ?? null
-    }
+    mapCompoundRefs(node, (ref) => idMap.get(ref) ?? null)
   }))
   return { steps, compounds: additions }
 }

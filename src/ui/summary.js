@@ -1,8 +1,9 @@
 // 步驟的一行摘要，卡片與流程圖共用。
 import {
-  ATMOSPHERES, DRY_METHODS, EVAPORATE_METHODS, MONITOR_METHODS, PHASES, STIR_SPECIALS,
+  ATMOSPHERES, CENTRIFUGE_KEPT, DRY_METHODS, EVAPORATE_METHODS, FILTER_KEPT, FILTER_METHODS,
+  MONITOR_METHODS, PHASES, RAMPS, SPEED_UNITS, STIR_SPECIALS,
 } from '../model/steps.js'
-import { formatAmount, formatDuration, formatEquiv, formatMass, formatVolume, sig } from '../model/units.js'
+import { formatAmount, formatDuration, formatEquiv, formatMass, formatVolume, isNum, sig } from '../model/units.js'
 
 const DOT = ' · '
 
@@ -14,15 +15,16 @@ export function stepSummary(step, row, doc) {
 }
 
 const SUMMARIES = {
-  add: (step, row) => [
+  add: (step, row, doc) => [
     compoundName(row),
     quantityText(step, row),
+    dissolveText(step, row, doc),
     step.addMode === 'dropwise' ? dropwiseText(step) : null,
     step.vessel || null,
   ],
   stir: (step) => [
     step.atm && step.atm !== 'air' ? ATMOSPHERES[step.atm]?.label : null,
-    step.temp !== null && step.temp !== undefined ? `${sig(step.temp)} °C` : null,
+    stirTempText(step),
     formatDuration(step.time),
     step.rpm ? `${sig(step.rpm)} rpm` : null,
     (step.special ?? []).map((id) => STIR_SPECIALS[id]?.label).filter(Boolean).join('、') || null,
@@ -33,10 +35,23 @@ const SUMMARIES = {
     `保留${PHASES[step.phaseKept]?.label ?? '有機層'}`,
   ],
   wash: (step, row) => [compoundName(row), quantityText(step, row)],
+  filter: (step, row) => [
+    FILTER_METHODS[step.method]?.label,
+    `保留${FILTER_KEPT[step.kept]?.label ?? '濾液'}`,
+    row?.compound ? `${row.compound.name} ${quantityText(step, row, { primaryOnly: true }) ?? ''}`.trim() + ' 洗滌' : null,
+  ],
+  centrifuge: (step) => [
+    speedText(step),
+    formatDuration(step.time),
+    isNum(step.temp) ? `${sig(step.temp)} °C` : null,
+    `保留${CENTRIFUGE_KEPT[step.kept]?.label ?? '沉澱'}`,
+  ],
   evaporate: (step) => [
     EVAPORATE_METHODS[step.method]?.label,
     step.temp !== null && step.temp !== undefined ? `${sig(step.temp)} °C` : null,
     step.pressure ? `${sig(step.pressure)} mbar` : null,
+    isNum(step.time) ? formatDuration(step.time) : null,
+    step.toDryness ? '至乾' : null,
   ],
   dry: (step, row) => [
     DRY_METHODS[step.method]?.label,
@@ -74,6 +89,29 @@ export function quantityText(step, row, { primaryOnly = false } = {}) {
   return row.repeat > 1 && both ? `${both} x${row.repeat}` : both || null
 }
 
+/** 攪拌溫度；緩慢升降溫時寫成「緩慢升溫至 80 °C（2 °C/min）」 */
+function stirTempText(step) {
+  const temp = isNum(step.temp) ? `${sig(step.temp)} °C` : null
+  if (!step.ramp) return temp
+  const rate = isNum(step.rampRate) ? `（${sig(step.rampRate)} °C/min）` : ''
+  return `${RAMPS[step.ramp]?.label ?? ''}${temp ? `至 ${temp}` : ''}${rate}`
+}
+
+/** 預溶：溶於 THF 20 mL */
+function dissolveText(step, row, doc) {
+  if (!step.dissolve) return null
+  const solvent = row?.dissolve?.compound ?? doc?.compounds?.find((c) => c.id === step.dissolve.solventId)
+  const name = solvent?.name || '（未指定溶劑）'
+  const volume = isNum(step.dissolve.volume) ? ` ${formatVolume(step.dissolve.volume * 1e-6)}` : ''
+  return `溶於${/^[A-Za-z0-9(]/.test(name) ? ' ' : ''}${name}${volume}`
+}
+
+/** 離心轉速：4000 rpm、3000 × g */
+export function speedText(step) {
+  if (!isNum(step.speed)) return null
+  return `${Math.round(step.speed)} ${SPEED_UNITS[step.speedUnit]?.text ?? 'rpm'}`
+}
+
 function dropwiseText(step) {
   const bits = ['滴加']
   if (step.duration) bits.push(formatDuration(step.duration))
@@ -84,10 +122,12 @@ function dropwiseText(step) {
 /** 流程圖左側：進入主流的物質 */
 export function inflowLabel(step, row) {
   if (step.freeform) return null
-  if (step.type === 'add' || step.type === 'extract' || step.type === 'wash') {
+  if (['add', 'extract', 'wash', 'filter'].includes(step.type)) {
     const name = compoundName(row)
     if (!name) return null
-    return [name, quantityText(step, row, { primaryOnly: true })].filter(Boolean).join(' ')
+    const label = [name, quantityText(step, row, { primaryOnly: true })].filter(Boolean).join(' ')
+    const dissolve = step.type === 'add' ? dissolveText(step, row) : null
+    return dissolve ? `${label}（${dissolve}）` : label
   }
   if (step.type === 'dry' && step.method === 'agent') return compoundName(row)
   return null
@@ -103,6 +143,10 @@ export function outflowLabel(step, row) {
     }
     case 'wash':
       return `洗液${row?.repeat > 1 ? ` x${row.repeat}` : ''}`
+    case 'filter':
+      return step.kept === 'solid' ? '濾液' : '濾餅'
+    case 'centrifuge':
+      return step.kept === 'pellet' ? '上清液' : '沉澱'
     case 'evaporate':
       return '蒸除溶劑'
     case 'dry':

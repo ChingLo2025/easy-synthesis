@@ -1,6 +1,6 @@
 // 所有文件變更集中於此，UI 只負責呼叫。
 // 結構性變動（增刪、排序、改 xN）立即各成一筆歷史；欄位輸入以 key 合併。
-import { createBranch, createCompound, createStep, findStep, locateStep, walkSteps } from '../model/schema.js'
+import { createBranch, createCompound, createStep, findStep, locateStep, mapCompoundRefs, walkSteps } from '../model/schema.js'
 import { uid } from '../model/ids.js'
 import { MAX_BRANCH_DEPTH } from '../model/steps.js'
 import { rememberCompound } from '../model/library.js'
@@ -53,6 +53,14 @@ export function createActions(store) {
       hit.step.amount = { ...(hit.step.amount ?? {}), ...patch }
       rememberStepDefaults(hit.step)
     }, patch.mode ? structural : { key: `${stepId}:amount` })
+  }
+
+  /** 預溶：patch 為 null 表示改回直接加入 */
+  function updateDissolve(stepId, patch, { key = null } = {}) {
+    const current = findStep(store.getState().doc, stepId)?.step
+    if (!current) return
+    const next = patch === null ? null : { solventId: null, volume: null, ...(current.dissolve ?? {}), ...patch }
+    updateStep(stepId, { dissolve: next }, { key })
   }
 
   function setRepeat(stepId, repeat) {
@@ -163,11 +171,7 @@ export function createActions(store) {
     store.transact((doc) => {
       doc.compounds = doc.compounds.filter((c) => c.id !== id)
       if (doc.basis.compoundId === id) doc.basis.compoundId = doc.compounds[0]?.id ?? null
-      walkSteps(doc.steps, (step) => {
-        for (const field of ['compoundId', 'solventId', 'agentId']) {
-          if (step[field] === id) step[field] = null
-        }
-      })
+      walkSteps(doc.steps, (step) => mapCompoundRefs(step, (ref) => (ref === id ? null : ref)))
     }, structural)
   }
 
@@ -187,7 +191,7 @@ export function createActions(store) {
   }
 
   return {
-    addStep, updateStep, updateAmount, setRepeat, removeStep, duplicateStep, moveStep,
+    addStep, updateStep, updateAmount, updateDissolve, setRepeat, removeStep, duplicateStep, moveStep,
     toggleFreeform, startBranch, setBranchLabel, removeBranch, canBranch,
     addCompound, updateCompound, commitCompound, removeCompound, setBasis, setMeta,
   }
@@ -199,9 +203,16 @@ const REMEMBERED_FIELDS = {
   stir: ['atm', 'temp', 'time', 'rpm', 'special'],
   extract: ['phaseKept'],
   wash: [],
+  filter: ['method', 'kept', 'rinseCount'],
+  centrifuge: ['speed', 'speedUnit', 'time', 'temp', 'kept'],
   evaporate: ['method', 'temp', 'pressure'],
   dry: ['method', 'temp', 'time'],
   monitor: ['method', 'interval', 'criteria'],
+}
+
+// 只在「同型別＋同化合物」時帶入：某試劑習慣先溶於 THF，不代表每次加料都要預溶
+const COMPOUND_FIELDS = {
+  add: ['dissolve'],
 }
 
 function rememberStepDefaults(step) {
@@ -213,7 +224,10 @@ function rememberStepDefaults(step) {
   if (step.amount?.mode) payload.amountMode = step.amount.mode
   rememberDefaults(step.type, null, payload)
   const compoundId = step.compoundId ?? step.solventId ?? step.agentId ?? null
-  if (compoundId) rememberDefaults(step.type, compoundId, payload)
+  if (!compoundId) return
+  const own = {}
+  for (const field of COMPOUND_FIELDS[step.type] ?? []) own[field] = step[field] ?? null
+  rememberDefaults(step.type, compoundId, { ...payload, ...own })
 }
 
 /** 新值與現值相同就略過：重複點同一顆按鈕、change 事件補送，都不該多出一步復原或清掉重做 */

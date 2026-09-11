@@ -63,6 +63,7 @@ function dataRow(row, { copy }) {
     el('td', {}, [
       el('span', { class: 'metrics__no' }, row.number + (row.repeat > 1 ? ` (${copy + 1}/${row.repeat})` : '')),
       row.branchLabel ? el('small', { class: 'muted' }, row.branchLabel) : null,
+      row.part === 'dissolve' ? el('small', { class: 'muted' }, ' 預溶') : null,
       row.repeat > 1 && copy === 0 ? el('span', { class: 'metrics__repeat screen-only' }, `x${row.repeat}`) : null,
     ]),
     ...cells,

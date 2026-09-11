@@ -5,7 +5,8 @@
 //   有 note   ：中文生成後原樣附加該句，英文留白
 //   有 freeform：中英文皆留白
 import { numberSteps, flattenSteps } from '../model/schema.js'
-import { ATMOSPHERES, DRY_METHODS, EVAPORATE_METHODS, MONITOR_METHODS, PHASES, STIR_SPECIALS } from '../model/steps.js'
+import { ATMOSPHERES, DRY_METHODS, EVAPORATE_METHODS, FILTER_METHODS, MONITOR_METHODS, PHASES, RAMPS, STIR_SPECIALS } from '../model/steps.js'
+import { speedText } from './summary.js'
 import {
   formatAmount, formatDuration, formatDurationEn, formatEquiv,
   formatMass, formatVolume, isNum, sig,
@@ -47,7 +48,7 @@ function groupSegments(entries) {
   const segments = []
   let run = null
   const mergeable = (step) =>
-    step.type === 'add' && step.addMode !== 'dropwise' && !step.freeform && !step.note?.trim() && (step.repeat ?? 1) === 1
+    step.type === 'add' && step.addMode !== 'dropwise' && !step.dissolve && !step.freeform && !step.note?.trim() && (step.repeat ?? 1) === 1
 
   for (const { step, branchLabel } of entries) {
     const tagged = Object.assign(Object.create(Object.getPrototypeOf(step)), step, { branchLabel })
@@ -147,27 +148,24 @@ function clauseZh(step, row, doc) {
     case 'add': {
       const name = compoundName(row, 'zh')
       const detail = quantityParen(step, row)
+      // 預溶：將 X 溶於 THF (20 mL) 後加入／緩慢滴入
+      const lead = step.dissolve ? `將${sp(name)}${detail} 溶於${sp(dissolveName(row, 'zh'))}${volumeParen(row?.dissolve)} 後` : ''
       if (step.addMode === 'dropwise') {
-        const bits = [`緩慢滴入${sp(name)}${detail}`]
+        const bits = [lead ? `${lead}緩慢滴入` : `緩慢滴入${sp(name)}${detail}`]
         if (isNum(step.duration)) bits.push(`滴加時間 ${formatDuration(step.duration)}`)
         if (isNum(step.rate)) bits.push(`速率 ${sig(step.rate)} mL/min`)
         if (isNum(step.tempMax)) bits.push(`控溫低於 ${sig(step.tempMax)} °C`)
         return bits.join('，')
       }
+      if (lead) return `${lead}加入${step.vessel ? `${sp(step.vessel)}中` : ''}${repeatZh(step)}`
       return `${step.vessel ? `於${sp(step.vessel)}中` : ''}加入${sp(name)}${detail}${repeatZh(step)}`
     }
     case 'stir': {
-      const specials = (step.special ?? []).map((id) => STIR_SPECIALS[id]?.label).filter(Boolean)
-      const bits = []
-      if (step.atm && step.atm !== 'air') bits.push(`於 ${ATMOSPHERES[step.atm].label} 下`)
-      if (specials.includes('遮光')) bits.push('避光')
-      if (isNum(step.temp)) bits.push(`${sig(step.temp)} °C`)
-      else if (specials.includes('迴流')) bits.push('迴流')
-      if (specials.includes('減壓')) bits.push('減壓')
-      bits.push('攪拌')
-      if (isNum(step.time)) bits.push(formatDuration(step.time))
-      if (isNum(step.rpm)) bits.push(`（${sig(step.rpm)} rpm）`)
-      return bits.join(' ').replace(/\s+/g, ' ').trim()
+      if (step.ramp) return rampZh(step)
+      const { lead, extra } = stirConditionsZh(step)
+      const heat = isNum(step.temp) ? `${sig(step.temp)} °C` : (step.special ?? []).includes('reflux') ? '迴流' : null
+      const main = [...lead, heat, '攪拌', isNum(step.time) ? formatDuration(step.time) : null].filter(Boolean).join(' ')
+      return `${main}${extra}`
     }
     case 'extract': {
       const kept = PHASES[step.phaseKept]?.label ?? '有機層'
@@ -179,8 +177,10 @@ function clauseZh(step, row, doc) {
       const conditions = []
       if (isNum(step.temp)) conditions.push(`${sig(step.temp)} °C`)
       if (isNum(step.pressure)) conditions.push(`${sig(step.pressure)} mbar`)
+      // 時間選填；至乾另外勾選
+      if (isNum(step.time)) conditions.push(formatDuration(step.time))
       const suffix = conditions.length ? `（${conditions.join('，')}）` : ''
-      return `以${EVAPORATE_METHODS[step.method]?.label ?? '濃縮'}${suffix}移除溶劑`
+      return `以${EVAPORATE_METHODS[step.method]?.label ?? '濃縮'}${suffix}移除溶劑${step.toDryness ? '至乾' : ''}`
     }
     case 'dry': {
       if (step.method === 'agent') return `以${sp(compoundName(row, 'zh'))}乾燥後過濾`
@@ -195,6 +195,20 @@ function clauseZh(step, row, doc) {
       if (step.method === 'retain') return `${interval}取樣留存${step.criteria ? `，${step.criteria}` : ''}`
       const method = MONITOR_METHODS[step.method]?.label ?? 'TLC'
       return `以${sp(method)} ${interval}追蹤反應${step.criteria ? `，直至${step.criteria}` : ''}`
+    }
+    case 'filter': {
+      const rinse = row?.compound
+        ? `濾餅以${sp(compoundName(row, 'zh'))}${volumeParen(row, rinseCount(step))} 洗滌`
+        : null
+      const collect = step.kept === 'solid' ? '收集濾餅' : rinse ? '合併濾液' : '收集濾液'
+      return [FILTER_METHODS[step.method]?.zh ?? '過濾', rinse, collect].filter(Boolean).join('，') + repeatZh(step)
+    }
+    case 'centrifuge': {
+      const speed = speedText(step)
+      const time = isNum(step.time) ? ` ${formatDuration(step.time)}` : ''
+      const temp = isNum(step.temp) ? `（${sig(step.temp)} °C）` : ''
+      const collect = step.kept === 'supernatant' ? '收集上清液' : '收集沉澱'
+      return `${speed ? `以 ${speed} ` : ''}離心${time}${temp}${repeatZh(step)}，${collect}`
     }
     default:
       return ''
@@ -217,18 +231,21 @@ function clauseEn(step, row, doc) {
     case 'add': {
       const name = compoundName(row, 'en')
       const detail = quantityParen(step, row, 'en')
+      // 預溶：a solution of X in THF (20 mL)
+      const subject = step.dissolve
+        ? `a solution of ${name}${detail} in ${dissolveName(row, 'en')}${volumeParen(row?.dissolve)}`
+        : `${name}${detail}`
       if (step.addMode === 'dropwise') {
-        const bits = [`${name}${detail} was added dropwise`]
-        if (isNum(step.duration)) bits.push(`over ${formatDurationEn(step.duration)}`)
+        const over = isNum(step.duration) ? ` over ${formatDurationEn(step.duration)}` : ''
+        const bits = [`${subject} was added dropwise${over}`]
         if (isNum(step.rate)) bits.push(`at ${sig(step.rate)} mL/min`)
         if (isNum(step.tempMax)) bits.push(`keeping the temperature below ${sig(step.tempMax)} °C`)
         return bits.join(', ')
       }
-      return step.vessel
-        ? `to a ${step.vessel} was added ${name}${detail}`
-        : `${name}${detail} was added`
+      return step.vessel ? `to a ${step.vessel} was added ${subject}` : `${subject} was added`
     }
     case 'stir': {
+      if (step.ramp) return rampEn(step)
       const bits = ['the mixture was stirred']
       if (isNum(step.temp)) bits.push(`at ${sig(step.temp)} °C`)
       if (step.atm && step.atm !== 'air') bits.push(`under ${ATMOSPHERES[step.atm].labelEn}`)
@@ -248,8 +265,10 @@ function clauseEn(step, row, doc) {
       const conditions = []
       if (isNum(step.temp)) conditions.push(`${sig(step.temp)} °C`)
       if (isNum(step.pressure)) conditions.push(`${sig(step.pressure)} mbar`)
+      if (isNum(step.time)) conditions.push(formatDurationEn(step.time))
       const suffix = conditions.length ? ` (${conditions.join(', ')})` : ''
-      return `the solvent was removed by ${EVAPORATE_METHODS[step.method]?.labelEn ?? 'concentration'}${suffix}`
+      const method = EVAPORATE_METHODS[step.method]?.labelEn ?? 'evaporation'
+      return `the mixture was concentrated${step.toDryness ? ' to dryness' : ''} by ${method}${suffix}`
     }
     case 'dry': {
       if (step.method === 'agent') return `dried over anhydrous ${compoundName(row, 'en')} and filtered`
@@ -263,6 +282,21 @@ function clauseEn(step, row, doc) {
       if (step.method === 'retain') return `samples were retained${interval}`
       const method = MONITOR_METHODS[step.method]?.labelEn ?? 'TLC'
       return `the reaction was monitored by ${method}${interval}${step.criteria ? ` until ${step.criteria}` : ''}`
+    }
+    case 'filter': {
+      const bits = [`the mixture was ${FILTER_METHODS[step.method]?.en ?? 'filtered'}${repeatEn(step)}`]
+      if (row?.compound) bits.push(`the filter cake was washed with ${compoundName(row, 'en')}${volumeParen(row, rinseCount(step))}`)
+      if (step.kept === 'solid') bits.push('the solid was collected')
+      else bits.push(row?.compound ? 'the combined filtrates were collected' : 'the filtrate was collected')
+      return joinEnClauses(bits)
+    }
+    case 'centrifuge': {
+      const speed = speedText(step)
+      const at = speed ? ` at ${speed}` : ''
+      const time = isNum(step.time) ? ` for ${formatDurationEn(step.time)}` : ''
+      const temp = isNum(step.temp) ? ` at ${sig(step.temp)} °C` : ''
+      const kept = step.kept === 'supernatant' ? 'the supernatant was collected' : 'the pellet was collected'
+      return `the mixture was centrifuged${at}${time}${temp}${repeatEn(step)}, and ${kept}`
     }
     default:
       return ''
@@ -322,6 +356,58 @@ function joinZh(items) {
 function joinEn(items) {
   if (items.length <= 1) return items[0] ?? ''
   return `${items.slice(0, -1).join(', ')} and ${items[items.length - 1]}`
+}
+
+/** 緩慢升降溫：於 N₂ 下緩慢升溫至 80 °C（2 °C/min），攪拌 2 小時 */
+function rampZh(step) {
+  const { lead, extra } = stirConditionsZh(step)
+  const reflux = (step.special ?? []).includes('reflux') && step.ramp === 'up'
+  const target = isNum(step.temp) ? `至 ${sig(step.temp)} °C` : reflux ? '至迴流' : ''
+  const rate = isNum(step.rampRate) ? `（${sig(step.rampRate)} °C/min）` : ''
+  const tail = ['攪拌', isNum(step.time) ? formatDuration(step.time) : null].filter(Boolean).join(' ')
+  return `${lead.join(' ')}${RAMPS[step.ramp].label}${target}${rate}，${tail}${extra}`
+}
+
+/** 攪拌條件：氣氛、封管、避光放在動詞前；減壓、超音波、轉速放在括號補充 */
+function stirConditionsZh(step) {
+  const has = (id) => (step.special ?? []).includes(id)
+  const lead = [
+    step.atm && step.atm !== 'air' ? `於 ${ATMOSPHERES[step.atm].label} 下` : null,
+    has('sealed') ? '於封管中' : null,
+    has('dark') ? '避光' : null,
+  ].filter(Boolean)
+  const notes = [
+    has('vacuum') ? '減壓' : null,
+    has('sonication') ? '超音波輔助' : null,
+    isNum(step.rpm) ? `${sig(step.rpm)} rpm` : null,
+  ].filter(Boolean)
+  return { lead, extra: notes.length ? `（${notes.join('，')}）` : '' }
+}
+
+/** the mixture was slowly heated to 80 °C (2 °C/min) under nitrogen and stirred for 2 h */
+function rampEn(step) {
+  const special = step.special ?? []
+  const refluxTarget = special.includes('reflux') && step.ramp === 'up' ? ' to reflux' : ''
+  const target = isNum(step.temp) ? ` to ${sig(step.temp)} °C` : refluxTarget
+  const rate = isNum(step.rampRate) ? ` (${sig(step.rampRate)} °C/min)` : ''
+  const atm = step.atm && step.atm !== 'air' ? ` under ${ATMOSPHERES[step.atm].labelEn}` : ''
+  const others = special.filter((id) => id !== 'reflux').map((id) => STIR_SPECIALS[id]?.labelEn).filter(Boolean)
+  const extra = others.length ? ` ${others.join(' and ')}` : ''
+  const time = isNum(step.time) ? ` for ${formatDurationEn(step.time)}` : ''
+  return `the mixture was ${RAMPS[step.ramp].labelEn}${target}${rate}${atm}${extra} and stirred${time}`
+}
+
+function dissolveName(row, lang) {
+  return compoundName(row?.dissolve ?? null, lang)
+}
+
+/** 過濾的濾餅洗滌次數 */
+function rinseCount(step) {
+  return Math.max(1, Math.round(step.rinseCount ?? 1))
+}
+
+function repeatEn(step) {
+  return step.repeat > 1 ? ` (${step.repeat} times)` : ''
 }
 
 /** 純文字複製：待補歸零前仍保留方括號標記，避免帶洞的文件被直接送出 */

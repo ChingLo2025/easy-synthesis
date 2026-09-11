@@ -2,7 +2,7 @@
 import { el } from './dom.js'
 import { iconMarkup } from './icons.js'
 import { inflowLabel, outflowLabel, stepSummary } from './summary.js'
-import { STEP_TYPES } from '../model/steps.js'
+import { FILTER_KEPT, FILTER_METHODS, STEP_TYPES } from '../model/steps.js'
 import { numberSteps } from '../model/schema.js'
 import { formatAmount, formatMass } from '../model/units.js'
 
@@ -112,10 +112,15 @@ function nodeDetail(step, row, doc) {
   if (step.freeform) return step.freeform.split('\n')[0].slice(0, 48)
   if (step.type === 'add') {
     const bits = []
+    if (step.dissolve) bits.push('預溶')
     if (step.addMode === 'dropwise') bits.push('滴加')
     if (step.vessel) bits.push(step.vessel)
     if (step.note) bits.push(step.note)
     return bits.join(' · ')
+  }
+  if (step.type === 'filter') {
+    return [FILTER_METHODS[step.method]?.label, `保留${FILTER_KEPT[step.kept]?.label ?? '濾液'}`, step.note]
+      .filter(Boolean).join(' · ')
   }
   if (step.type === 'extract' || step.type === 'wash') {
     return step.note || ''

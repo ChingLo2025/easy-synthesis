@@ -12,6 +12,8 @@ const MODULE_HINTS = {
   stir: '溫度、氣氛、時間',
   extract: '分液、保留相',
   wash: '水洗、鹽水洗',
+  filter: '抽氣、矽藻土',
+  centrifuge: '轉速、保留相',
   evaporate: '旋濃、蒸餾',
   dry: '乾燥劑、烘箱',
   monitor: 'TLC、HPLC 追蹤',

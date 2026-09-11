@@ -41,6 +41,24 @@ export const STEP_TYPES = {
     compoundField: 'solventId',
     flowSide: 'both',
   },
+  filter: {
+    label: '過濾',
+    labelEn: 'Filtration',
+    family: FAMILY.separate,
+    icon: 'filter',
+    // 濾餅洗液選填，沒填不算缺漏
+    compoundField: 'solventId',
+    compoundOptional: true,
+    flowSide: 'both',
+  },
+  centrifuge: {
+    label: '離心',
+    labelEn: 'Centrifugation',
+    family: FAMILY.separate,
+    icon: 'centrifuge',
+    compoundField: null,
+    flowSide: 'out',
+  },
   evaporate: {
     label: '濃縮',
     labelEn: 'Concentration',
@@ -67,7 +85,7 @@ export const STEP_TYPES = {
   },
 }
 
-export const STEP_ORDER = ['add', 'stir', 'extract', 'wash', 'evaporate', 'dry', 'monitor']
+export const STEP_ORDER = ['add', 'stir', 'extract', 'wash', 'filter', 'centrifuge', 'evaporate', 'dry', 'monitor']
 
 export const AMOUNT_MODES = {
   mass: { label: '質量', unit: 'g', hint: 'g' },
@@ -103,7 +121,7 @@ export const STIR_SPECIALS = {
 
 export const EVAPORATE_METHODS = {
   rotary: { label: '旋轉濃縮', labelEn: 'rotary evaporation' },
-  vacuum: { label: '真空濃縮', labelEn: 'concentration under vacuum' },
+  vacuum: { label: '真空濃縮', labelEn: 'evaporation under vacuum' },
   distill: { label: '蒸餾', labelEn: 'distillation' },
 }
 
@@ -125,6 +143,34 @@ export const MONITOR_METHODS = {
 export const PHASES = {
   organic: { label: '有機層', labelEn: 'organic layer' },
   aqueous: { label: '水層', labelEn: 'aqueous layer' },
+}
+
+/** 攪拌的緩慢升降溫；溫度欄位即目標溫度 */
+export const RAMPS = {
+  up: { label: '緩慢升溫', labelEn: 'slowly heated', rateLabel: '升溫速率' },
+  down: { label: '緩慢降溫', labelEn: 'slowly cooled', rateLabel: '降溫速率' },
+}
+
+export const FILTER_METHODS = {
+  vacuum: { label: '抽氣過濾', zh: '抽氣過濾', en: 'filtered under reduced pressure' },
+  gravity: { label: '重力過濾', zh: '重力過濾', en: 'filtered by gravity' },
+  celite: { label: '矽藻土', zh: '經矽藻土墊過濾', en: 'filtered through a pad of Celite' },
+  syringe: { label: '針筒過濾器', zh: '以針筒過濾器過濾', en: 'passed through a syringe filter' },
+}
+
+export const FILTER_KEPT = {
+  filtrate: { label: '濾液', labelEn: 'filtrate' },
+  solid: { label: '濾餅', labelEn: 'solid' },
+}
+
+export const CENTRIFUGE_KEPT = {
+  pellet: { label: '沉澱', labelEn: 'pellet' },
+  supernatant: { label: '上清液', labelEn: 'supernatant' },
+}
+
+export const SPEED_UNITS = {
+  rpm: { label: 'rpm', text: 'rpm' },
+  g: { label: '×g', text: '× g' },
 }
 
 /** 分歧深度軟性上限（§2）。超過時提示改為另開一份程序。 */

@@ -45,14 +45,15 @@ function defaultsKey(type, compoundId) {
 /** 記住某型別（或某型別＋化合物）最後使用的欄位值 */
 export function rememberDefaults(type, compoundId, fields) {
   const table = recent()
-  table[defaultsKey(type, compoundId)] = { ...(table[defaultsKey(type, compoundId)] ?? {}), ...fields }
+  // 存複本：之後改動文件裡的步驟（例如刪除化合物）不會連帶改到記住的值
+  table[defaultsKey(type, compoundId)] = { ...(table[defaultsKey(type, compoundId)] ?? {}), ...structuredClone(fields) }
   saveLastUsed(table)
 }
 
 /** 取回預設值：化合物專屬優先，其次型別通用 */
 export function recallDefaults(type, compoundId) {
   const table = recent()
-  return { ...(table[type] ?? {}), ...(compoundId ? (table[defaultsKey(type, compoundId)] ?? {}) : {}) }
+  return structuredClone({ ...(table[type] ?? {}), ...(compoundId ? (table[defaultsKey(type, compoundId)] ?? {}) : {}) })
 }
 
 /** 測試用：清空快取，強制重讀 */

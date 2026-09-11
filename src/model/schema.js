@@ -44,15 +44,26 @@ const STEP_DEFAULTS = {
     rate: null,
     tempMax: null,
     vessel: '',
+    // 預溶：{ solventId, volume(mL) }；null 表示直接加入
+    dissolve: null,
   }),
-  stir: () => ({ atm: 'air', temp: null, time: null, rpm: null, special: [] }),
+  stir: () => ({ atm: 'air', temp: null, time: null, rpm: null, special: [], ramp: null, rampRate: null }),
   extract: () => ({
     solventId: null,
     amount: { mode: 'volume', value: null },
     phaseKept: 'organic',
   }),
   wash: () => ({ solventId: null, amount: { mode: 'volume', value: null } }),
-  evaporate: () => ({ method: 'rotary', temp: null, pressure: null }),
+  filter: () => ({
+    method: 'vacuum',
+    kept: 'filtrate',
+    solventId: null,
+    amount: { mode: 'volume', value: null },
+    rinseCount: 1,
+  }),
+  centrifuge: () => ({ speed: null, speedUnit: 'rpm', time: null, temp: null, kept: 'pellet' }),
+  // 濃縮：時間選填；是否抽至乾另外勾選
+  evaporate: () => ({ method: 'rotary', temp: null, pressure: null, time: null, toDryness: false }),
   dry: () => ({ method: 'agent', agentId: null, temp: null, time: null }),
   monitor: () => ({ method: 'TLC', interval: null, criteria: '' }),
 }
@@ -124,6 +135,14 @@ export function compoundById(doc, id) {
   return id ? (doc.compounds.find((c) => c.id === id) ?? null) : null
 }
 
+/** 步驟中所有指向化合物的參照（含預溶溶劑）。fn 回傳新的 id，回傳 null 表示清除 */
+export function mapCompoundRefs(step, fn) {
+  for (const field of ['compoundId', 'solventId', 'agentId']) {
+    if (step[field]) step[field] = fn(step[field])
+  }
+  if (step.dissolve?.solventId) step.dissolve.solventId = fn(step.dissolve.solventId)
+}
+
 /** 主軸步驟編號（1, 2, 3…），分支則為 3.1, 3.2… */
 export function numberSteps(steps) {
   const numbers = new Map()
@@ -189,6 +208,11 @@ function normalizeStep(raw) {
     }
   }
   if (Array.isArray(raw.special)) step.special = raw.special.filter((s) => typeof s === 'string')
+  if ('dissolve' in step) step.dissolve = normalizeDissolve(raw.dissolve)
+  if ('toDryness' in step) step.toDryness = Boolean(step.toDryness)
+  if ('ramp' in step) step.ramp = raw.ramp === 'up' || raw.ramp === 'down' ? raw.ramp : null
+  if ('rampRate' in step) step.rampRate = num(step.rampRate)
+  if ('rinseCount' in step) step.rinseCount = Math.max(1, Math.round(num(raw.rinseCount) ?? 1))
   step.branch = raw.branch
     ? {
         label: str(raw.branch.label),
@@ -196,6 +220,11 @@ function normalizeStep(raw) {
       }
     : null
   return step
+}
+
+function normalizeDissolve(raw) {
+  if (!raw || typeof raw !== 'object') return null
+  return { solventId: raw.solventId ?? null, volume: num(raw.volume) }
 }
 
 function num(v) {

@@ -29,10 +29,18 @@ export function compute(doc) {
         message: `分歧深度已達 ${depth} 層，建議改為另開一份程序。`,
       })
     }
-    rows.push(buildRow({ doc, step, depth, branchLabel, number: numbers.get(step.id), basis, warnings }))
+    const number = numbers.get(step.id)
+    const row = buildRow({ doc, step, depth, branchLabel, number, basis, warnings })
+    rows.push(row)
+    const dissolve = dissolveRow({ doc, step, row, number, basis, warnings })
+    if (dissolve) {
+      row.dissolve = dissolve
+      rows.push(dissolve)
+    }
   }
 
-  const byStep = new Map(rows.map((row) => [row.stepId, row]))
+  // 預溶溶劑是附屬列；步驟本身仍對應主列
+  const byStep = new Map(rows.filter((row) => !row.part).map((row) => [row.stepId, row]))
   return {
     basis,
     rows,
@@ -98,7 +106,9 @@ function buildRow({ doc, step, depth, branchLabel, number, basis, warnings }) {
   const meta = STEP_TYPES[step.type]
   const field = meta.compoundField
   const compound = field ? compoundById(doc, step[field]) : null
-  const repeat = Math.max(1, Math.round(step.repeat ?? 1))
+  // 過濾的濾餅洗液按洗滌次數計量
+  const portions = step.type === 'filter' ? Math.max(1, Math.round(step.rinseCount ?? 1)) : 1
+  const repeat = Math.max(1, Math.round(step.repeat ?? 1)) * portions
 
   const row = {
     stepId: step.id,
@@ -136,7 +146,7 @@ function buildRow({ doc, step, depth, branchLabel, number, basis, warnings }) {
   if (!field) return row
 
   if (!compound) {
-    const optional = step.type === 'dry' && step.method !== 'agent'
+    const optional = meta.compoundOptional || (step.type === 'dry' && step.method !== 'agent')
     if (!optional) {
       warnings.push({
         level: WARN.warn,
@@ -167,6 +177,42 @@ function buildRow({ doc, step, depth, branchLabel, number, basis, warnings }) {
   row.totalMass = scale(row.mass, repeat)
   row.totalVolume = scale(row.volume, repeat)
   return row
+}
+
+/** 預溶溶劑：跟著加料一起進反應槽，另列一行計量並計入溶劑總量 */
+function dissolveRow({ doc, step, row, number, basis, warnings }) {
+  if (step.type !== 'add' || !step.dissolve || step.freeform) return null
+  const solvent = compoundById(doc, step.dissolve.solventId)
+  if (!solvent) {
+    warnings.push({ level: WARN.warn, stepId: step.id, code: 'dissolve-solvent', message: `步驟 ${number}：尚未指定預溶溶劑。` })
+    return null
+  }
+  if (!isNum(step.dissolve.volume)) {
+    warnings.push({ level: WARN.warn, stepId: step.id, code: 'dissolve-volume', message: `步驟 ${number}：尚未填預溶溶劑體積。` })
+  }
+  const quantity = quantify({ mode: 'volume', value: step.dissolve.volume }, properties(solvent), basis)
+  const { n, mass, volume } = quantity.value
+  return {
+    stepId: step.id,
+    part: 'dissolve',
+    number,
+    type: step.type,
+    depth: row.depth,
+    branchLabel: row.branchLabel,
+    repeat: row.repeat,
+    compound: solvent,
+    role: solvent.role,
+    driver: 'volume',
+    freeform: false,
+    n,
+    mass,
+    volume,
+    equiv: basis.ok && isNum(n) ? n / basis.n : null,
+    totalN: scale(n, row.repeat),
+    totalMass: scale(mass, row.repeat),
+    totalVolume: scale(volume, row.repeat),
+    incomplete: quantity.missing,
+  }
 }
 
 /** 由驅動欄位推導其餘三欄 */
