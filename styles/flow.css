@@ -1,6 +1,6 @@
 /* Flow diagram: central axis. The main stream runs top to bottom along the central vertical axis;
    added materials enter from the left with arrows, and removed materials leave to the right. */
-.flow { display: flex; flex-direction: column; align-items: stretch; }
+.flow { display: flex; flex-direction: column; align-items: stretch; container-type: inline-size; }
 /* Safety valve for very narrow windows: the diagram scrolls itself instead of breaking the page */
 @media screen { .flow { overflow-x: auto; } }
 
@@ -10,19 +10,22 @@
   column-gap: 8px;
 }
 
+/* Side columns keep a readable minimum; the node column takes the larger share and wraps its conditions */
 .flow__row {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  grid-template-columns: minmax(64px, 1fr) minmax(150px, 2.2fr) minmax(64px, 1fr);
   align-items: center;
-  column-gap: 10px;
+  column-gap: 6px;
 }
 
 .flow__node {
   display: flex;
   align-items: center;
   gap: 9px;
-  min-width: 180px;
-  max-width: 340px;
+  justify-self: center;
+  width: 100%;
+  min-width: 0;
+  max-width: 320px;
   padding: 8px 11px;
   border: 1px solid var(--line-strong);
   border-radius: var(--radius);
@@ -64,7 +67,7 @@
   min-width: 0;
   max-width: 180px;
   display: -webkit-box;
-  -webkit-line-clamp: 2;
+  -webkit-line-clamp: 3;
   -webkit-box-orient: vertical;
   overflow: hidden;
   overflow-wrap: anywhere;
@@ -87,6 +90,7 @@
 .flow__branch {
   justify-self: start;
   min-width: 0;
+  max-width: calc(100% - 10px);
   margin: 2px 0 2px 10px;
   padding: 4px 0 4px 14px;
   border-left: 1.5px dashed var(--separate-line);
@@ -102,9 +106,11 @@
   padding: 1px 8px;
   margin-bottom: 4px;
 }
-.flow__branch .flow__row { grid-template-columns: 0 auto minmax(0, 1fr); column-gap: 6px; justify-items: start; }
-.flow__branch .flow__node { min-width: 0; max-width: 230px; padding: 6px 9px; }
-.flow__branch .flow__side-label { white-space: nowrap; max-width: 96px; text-overflow: ellipsis; }
+.flow__branch .flow__row { grid-template-columns: 0 fit-content(200px) minmax(0, 1fr); column-gap: 6px; justify-items: start; }
+.flow__branch .flow__node { width: auto; min-width: 0; max-width: 200px; padding: 6px 9px; }
+/* Branch side labels fill what is left of the row and wrap, instead of spilling past the edge */
+.flow__branch .flow__side { overflow: hidden; justify-self: stretch; }
+.flow__branch .flow__side-label { max-width: none; }
 .flow__branch .flow__title { font-size: 12.5px; }
 .flow__branch .flow__link { grid-template-columns: 0 auto minmax(0, 1fr); justify-items: start; }
 .flow__branch .flow__link svg { justify-self: start; margin-left: 24px; }
@@ -113,6 +119,7 @@
   justify-self: center;
   grid-column: 2;
   display: inline-flex; align-items: center; gap: 6px;
+  flex-wrap: wrap; justify-content: center; text-align: center; min-width: 0;
   padding: 4px 12px;
   border: 1px dashed var(--line-strong);
   border-radius: 999px;
@@ -127,3 +134,15 @@
 
 .flow__node[data-selected="true"] { outline: 2px solid var(--accent); outline-offset: 1px; }
 .flow__node[data-freeform="true"] { border-style: dashed; }
+
+/* A narrow flow (phone, or the right column of a small window): shorter arrows, wider side labels.
+   Kept last so it overrides the base rules above. */
+@container (max-width: 480px) {
+  .flow__row { grid-template-columns: minmax(64px, 1fr) minmax(130px, 1.6fr) minmax(64px, 1fr); column-gap: 4px; }
+  .flow__side { gap: 3px; }
+  .flow__arrow { width: 14px; }
+  .flow__side-label { font-size: 11px; hyphens: auto; }
+  .flow__branch-row { grid-template-columns: minmax(0, 18%) minmax(0, 1fr); }
+  .flow__branch .flow__row { grid-template-columns: 0 minmax(0, 1.6fr) minmax(56px, 1fr); }
+  .flow__branch .flow__node { width: 100%; }
+}

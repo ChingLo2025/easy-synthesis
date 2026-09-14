@@ -1,5 +1,6 @@
 // Shared editor parts: amount fields, derived values, recalling last-used values after picking a compound, pre-dissolve fields.
 import { el } from './dom.js'
+import { iconMarkup } from './icons.js'
 import { compoundPicker } from './picker.js'
 import { field, numberField, numberInput, row } from './fields.js'
 import { AMOUNT_MODES } from '../model/steps.js'
@@ -91,11 +92,29 @@ function isEmpty(value) {
   return value === null || value === undefined || value === '' || (Array.isArray(value) && !value.length)
 }
 
+/** A compound picker with an edit button beside it, so the compound's details (MW, density, CAS…) are one click away */
+export function compoundControl(ctx, compoundId, picker) {
+  const compound = compoundId ? ctx.doc.compounds.find((c) => c.id === compoundId) : null
+  return el('div', { class: 'picker-row' }, [
+    picker,
+    compound && ctx.onEditCompound
+      ? el('button', {
+          class: 'btn btn--icon',
+          type: 'button',
+          title: `Edit ${compound.name || 'compound'} (MW, density, CAS…)`,
+          'aria-label': 'Edit compound',
+          onclick: () => ctx.onEditCompound(compound.id),
+          html: iconMarkup('pencil', { size: 15 }),
+        })
+      : null,
+  ])
+}
+
 /** Pre-dissolve: pick a solvent and enter its volume (mL) */
 export function dissolveFields(step, ctx) {
   const { doc, actions, store } = ctx
   return row([
-    field('Pre-dissolve solvent', compoundPicker({
+    field('Pre-dissolve solvent', compoundControl(ctx, step.dissolve?.solventId, compoundPicker({
       doc,
       value: step.dissolve?.solventId ?? null,
       filter: 'solvent',
@@ -104,7 +123,7 @@ export function dissolveFields(step, ctx) {
         const solventId = choice.compoundId ?? actions.addCompound(choice.create).id
         actions.updateDissolve(step.id, { solventId })
       },
-    })),
+    }))),
     numberField('Solvent volume', {
       name: 'dissolveVolume', value: step.dissolve?.volume, suffix: 'mL',
       onInput: (volume) => actions.updateDissolve(step.id, { volume }, { key: 'dissolveVolume' }),

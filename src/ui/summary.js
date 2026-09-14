@@ -19,7 +19,7 @@ const SUMMARIES = {
     compoundName(row),
     quantityText(step, row),
     dissolveText(step, row, doc),
-    step.addMode === 'dropwise' ? dropwiseText(step) : null,
+    ...(step.addMode === 'dropwise' ? dropwiseParts(step) : []),
     step.vessel || null,
   ],
   stir: (step) => [
@@ -112,11 +112,13 @@ export function speedText(step) {
   return `${Math.round(step.speed)} ${SPEED_UNITS[step.speedUnit]?.text ?? 'rpm'}`
 }
 
-function dropwiseText(step) {
-  const bits = ['Dropwise']
-  if (step.duration) bits.push(formatDurationEn(step.duration))
-  if (step.tempMax !== null && step.tempMax !== undefined) bits.push(`below ${sig(step.tempMax)} °C`)
-  return bits.join(' ')
+/** Dropwise conditions, shared by the card summary and the flow node */
+export function dropwiseParts(step) {
+  return [
+    isNum(step.duration) ? `Dropwise over ${formatDurationEn(step.duration)}` : 'Dropwise',
+    isNum(step.rate) ? `${sig(step.rate)} mL/min` : null,
+    isNum(step.tempMax) ? `below ${sig(step.tempMax)} °C` : null,
+  ].filter(Boolean)
 }
 
 /** Flow diagram left side: material entering the main stream */

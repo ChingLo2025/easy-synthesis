@@ -173,3 +173,60 @@
 .statusbar__item--error { color: var(--danger); }
 .statusbar__item--warn { color: var(--warn); }
 .statusbar__spacer { flex: 1; }
+
+/* ── Narrow screens: Steps / Preview tabs instead of three columns ─────────── */
+.viewswitch { display: none; }
+
+@media screen and (max-width: 1024px) {
+  /* Top bar wraps: title + actions on the first line, operator / batch / date on the second */
+  .topbar { height: auto; flex-wrap: wrap; gap: 6px 8px; padding: 8px 10px; }
+  .topbar__brand { display: none; }
+  .topbar__meta { display: contents; }
+  .topbar .sep { display: none; }
+  .meta-input--title { order: 1; flex: 1 1 0; min-width: 0; max-width: none; }
+  .topbar__actions { order: 2; gap: 4px; }
+  .topbar::after { content: ''; order: 3; flex-basis: 100%; height: 0; }
+  .meta-input--sm { order: 4; flex: 1 1 0; min-width: 0; max-width: none; }
+  .topbar__actions .btn--primary { width: 30px; padding: 0; justify-content: center; }
+  .topbar__actions .btn--primary span:last-child { display: none; }
+
+  .viewswitch {
+    display: flex;
+    gap: 4px;
+    padding: 6px 10px;
+    background: var(--surface);
+    border-bottom: 1px solid var(--line);
+    flex: none;
+  }
+  .viewswitch button {
+    flex: 1;
+    height: 32px;
+    border-radius: var(--radius-sm);
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--ink-3);
+    background: var(--surface-3);
+  }
+  .viewswitch button[aria-selected="true"] { background: var(--accent); color: #fff; }
+
+  /* One scroll container per view; the step modules become a strip above the cards */
+  .workspace { display: block; overflow-y: auto; background: var(--bg); }
+  .app[data-view="steps"] .panel--document { display: none; }
+  .app[data-view="preview"] .panel--palette,
+  .app[data-view="preview"] .panel--sequence { display: none; }
+  .panel { min-height: auto; }
+  .panel__body { overflow: visible; }
+  .app[data-view="preview"] .panel--document { min-height: 100%; }
+
+  .panel--palette { overflow: visible; padding-bottom: 6px; border-bottom: 1px solid var(--line); }
+  .palette__group:first-child .palette__list { flex-direction: row; overflow-x: auto; padding-bottom: 4px; }
+  .palette__group:first-child .module { width: auto; flex: none; padding: 5px 8px; gap: 6px; border-color: var(--line); }
+  .module__hint { display: none; }
+  .module__icon { width: 28px; height: 28px; }
+  .module__icon .icon { width: 22px; height: 22px; }
+  .palette__extras { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); }
+
+  .panel--document .panel__body { padding: 10px; }
+  .panel--document .document { padding: 16px 14px; }
+  .statusbar__spacer ~ .statusbar__item { display: none; }
+}

@@ -3,7 +3,7 @@ import { el } from './dom.js'
 import { iconMarkup } from './icons.js'
 import { compoundPicker } from './picker.js'
 import { chipRow, field, numberField, row } from './fields.js'
-import { amountBlock, derivedStrip, pickCompound } from './editor-parts.js'
+import { amountBlock, compoundControl, derivedStrip, pickCompound } from './editor-parts.js'
 import { CENTRIFUGE_KEPT, FILTER_KEPT, FILTER_METHODS, SPEED_UNITS } from '../model/steps.js'
 
 /** Filter: method, keep filtrate or solid; the cake rinse is optional, and its amount and rinse count show only once chosen */
@@ -18,13 +18,13 @@ export function filterEditor(step, ctx) {
       id, label: meta.label, active: step.kept === id,
     })), (item) => actions.updateStep(step.id, { kept: item.id }), { rank: false, namespace: 'filterKept' }),
     el('div', { style: { display: 'flex', gap: '6px', alignItems: 'flex-end' } }, [
-      el('div', { style: { flex: '1', minWidth: '0' } }, field('Cake rinse (optional)', compoundPicker({
+      el('div', { style: { flex: '1', minWidth: '0' } }, field('Cake rinse (optional)', compoundControl(ctx, step.solventId, compoundPicker({
         doc,
         value: step.solventId,
         filter: 'solvent',
         placeholder: 'No rinse',
         onPick: (choice) => pickCompound(ctx, step.id, 'solventId', choice),
-      }))),
+      })))),
       rinse
         ? el('button', {
             class: 'btn btn--ghost btn--icon',

@@ -70,7 +70,9 @@ tests/                node:test tests
 - **Driving field**: `amount.mode` is the driving field; the other three columns are derived by the engine and shown in grey. There is no general constraint solver.
 - **Narrative merging**: consecutive simple additions merge into one sentence ("A and B were added"), and a following stir joins the same sentence. Dropwise additions and steps with a note or freeform text get their own sentence. Blanking is decided per step.
 - **Blank markers**: a step with a note is left blank in English; a step with freeform text is left blank in both languages. The Chinese marker is `［步驟 N：手動輸入，待補寫］` and the English one is `[Step N: manual entry, to be written]`, both on a grey background. Until nothing is pending, copied plain text keeps the markers.
-- **Printing**: prints the current tab. The flow diagram and quantities table are stacked on one page; the narrative is a separate tab.
+- **Printing**: prints the current tab. The flow diagram and quantities table are stacked on one page; the narrative is a separate tab. Batch, date and operator appear once, beside the title (with a signature blank that only prints), instead of in a separate footer, so long procedures take fewer pages.
+- **Narrow screens**: at 1024 px and below, the three columns collapse into Steps / Preview tabs, and the step modules become a horizontal strip above the cards.
+- **Compound details**: every compound picker in a step card has an edit button that opens the compounds dialog on that compound.
 - **Theoretical yield**: the product is set via the optional `meta.product = { name, mw }` (bottom of the compounds dialog); without a MW only moles are shown.
 - **Branch depth**: soft limit of two levels. A third level can't be created; the second level is flagged under "To review".
 - **Frequency ordering**: applies to quick condition buttons (atmosphere, temperature, time, method, etc.); the nine modules on the left keep a fixed order so the interface doesn't jump around.

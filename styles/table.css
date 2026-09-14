@@ -1,23 +1,38 @@
-/* Document: flow diagram on top, quantities table below, signature footer. */
+/* Document: title row with batch / date / operator, flow diagram, quantities table. */
 .document {
   max-width: 860px;
   margin: 0 auto;
   background: var(--surface);
   border: 1px solid var(--line);
   border-radius: var(--radius-lg);
-  padding: 28px 32px 24px;
+  padding: 24px 28px;
   display: flex;
   flex-direction: column;
-  gap: 22px;
+  gap: 18px;
 }
 .doc-section { display: flex; flex-direction: column; gap: 12px; }
 .doc-section__head { display: flex; align-items: baseline; gap: 8px; border-bottom: 1px solid var(--line); padding-bottom: 6px; }
 .doc-section__head h3 { font-size: 13px; letter-spacing: 0.02em; }
 .doc-section__head small { color: var(--ink-4); font-size: 11.5px; }
-.doc-title { display: flex; flex-direction: column; gap: 3px; }
-.doc-title h1 { font-size: 20px; letter-spacing: -0.02em; }
-.doc-title__meta { display: flex; flex-wrap: wrap; gap: 14px; font-size: 12px; color: var(--ink-3); }
+/* Title row: batch / date / operator sit beside the title instead of in a separate footer, to save space */
+.doc-title {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 4px 18px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--line-strong);
+}
+.doc-title h1 { font-size: 20px; letter-spacing: -0.02em; min-width: 0; overflow-wrap: anywhere; }
+.doc-title__meta { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 14px; font-size: 12px; color: var(--ink-3); }
+.doc-title__item { display: inline-flex; align-items: baseline; gap: 5px; white-space: nowrap; }
+.doc-title__label { color: var(--ink-4); }
+.doc-title__value { color: var(--ink); font-variant-numeric: tabular-nums; }
+.doc-title__blank { display: inline-block; width: 64px; border-bottom: 1px solid var(--ink-4); }
+.only-print-inline { display: none; }
 
+.metrics-scroll { overflow-x: auto; }
 table.metrics { width: 100%; border-collapse: collapse; font-size: 12.5px; }
 table.metrics th, table.metrics td {
   text-align: right;
@@ -104,25 +119,12 @@ table.metrics tr[data-freeform="true"] td { color: var(--ink-4); font-style: ita
 .warning-item[data-level="error"] { color: var(--danger); background: var(--danger-soft); border-color: #f2cec9; }
 .warning-item[data-level="warn"] { color: var(--warn); background: var(--warn-soft); border-color: #f0e0b8; }
 
-/* Footer: batch no., date, operator, signature */
-.doc-footer {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 16px;
-  padding-top: 16px;
-  border-top: 1px solid var(--line-strong);
-  font-size: 11.5px;
-  color: var(--ink-3);
-}
-.doc-footer__cell { display: flex; flex-direction: column; gap: 20px; }
-.doc-footer__label { letter-spacing: 0.04em; }
-.doc-footer__line { border-bottom: 1px solid var(--ink-4); min-height: 1px; }
-.doc-footer__value { color: var(--ink); font-size: 12.5px; min-height: 18px; }
 
 /* Repeated steps expand into N rows when printed; on screen they show as one row with xN */
 .only-print { display: none; }
 .screen-only { display: inline-flex; }
 @media print {
   .only-print { display: table-row; }
+  .only-print-inline { display: inline-flex; }
   .screen-only { display: none !important; }
 }

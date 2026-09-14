@@ -32,7 +32,8 @@ export function renderMetrics(doc, metrics) {
     for (const row of group.rows) body.append(...dataRows(row))
   }
   table.append(body)
-  wrap.append(table)
+  // Scrolls sideways on narrow screens instead of widening the page
+  wrap.append(el('div', { class: 'metrics-scroll' }, table))
   wrap.append(totals(doc, metrics))
   return wrap
 }

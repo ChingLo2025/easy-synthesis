@@ -70,8 +70,11 @@ export function promptModal({ title, label, value = '', confirmText = 'Save', on
   }
 }
 
-/** Compound list; the basis is set here too */
-export function compoundsModal({ store, actions, onChange }) {
+/**
+ * Compound list; the basis is set here too.
+ * focusId: when opened from a step card, scroll to that compound's row and highlight it.
+ */
+export function compoundsModal({ store, actions, onChange, focusId = null }) {
   const body = el('div', { style: { display: 'flex', flexDirection: 'column', gap: '10px' } })
 
   function render() {
@@ -132,7 +135,7 @@ export function compoundsModal({ store, actions, onChange }) {
       onBlur: commit,
     })
 
-    return el('div', { class: 'compound-row', dataset: { basis: String(isBasis) } }, [
+    return el('div', { class: 'compound-row', dataset: { basis: String(isBasis), compoundId: compound.id, focus: String(compound.id === focusId) } }, [
       text('name', 'Compound name'),
       text('cas', 'CAS'),
       number('mw', 'g/mol'),
@@ -194,7 +197,13 @@ export function compoundsModal({ store, actions, onChange }) {
   }
 
   render()
-  return openModal({ title: 'Compounds & basis', body, wide: true, actions: [el('button', { class: 'btn btn--primary', type: 'button', onclick: close }, 'Done')] })
+  const modal = openModal({ title: 'Compounds & basis', body, wide: true, actions: [el('button', { class: 'btn btn--primary', type: 'button', onclick: close }, 'Done')] })
+  const target = focusId ? body.querySelector(`[data-compound-id="${CSS.escape(focusId)}"]`) : null
+  if (target) {
+    target.scrollIntoView({ block: 'nearest' })
+    target.querySelector('input')?.focus({ preventScroll: true })
+  }
+  return modal
 }
 
 /** Templates: whole procedures and step groups */

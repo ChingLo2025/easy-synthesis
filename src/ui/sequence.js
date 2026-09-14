@@ -9,7 +9,7 @@ import { STEP_TYPES, STEP_ORDER, MAX_BRANCH_DEPTH } from '../model/steps.js'
 import { numberSteps } from '../model/schema.js'
 import { toast } from './toast.js'
 
-export function createSequence({ root, store, actions, getMetrics }) {
+export function createSequence({ root, store, actions, getMetrics, onEditCompound = null }) {
   let dragId = null
 
   root.addEventListener('dragover', (event) => {
@@ -132,7 +132,7 @@ export function createSequence({ root, store, actions, getMetrics }) {
     if (step.freeform !== null) {
       body.append(freeformBlock(step))
     } else {
-      for (const node of renderEditor(step, { doc, actions, store, row: metrics })) body.append(node)
+      for (const node of renderEditor(step, { doc, actions, store, row: metrics, onEditCompound })) body.append(node)
       body.append(noteRow(step))
     }
 

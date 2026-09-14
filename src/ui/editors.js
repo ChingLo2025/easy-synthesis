@@ -2,7 +2,7 @@
 import { el } from './dom.js'
 import { compoundPicker } from './picker.js'
 import { chipRow, field, numberField, onTextInput, row, selectField, textField } from './fields.js'
-import { amountBlock, derivedStrip, dissolveFields, pickCompound } from './editor-parts.js'
+import { amountBlock, compoundControl, derivedStrip, dissolveFields, pickCompound } from './editor-parts.js'
 import { centrifugeEditor, filterEditor } from './editors-workup.js'
 import {
   ATMOSPHERES, DRY_METHODS, EVAPORATE_METHODS,
@@ -23,11 +23,11 @@ function addEditor(step, ctx) {
   const compound = doc.compounds.find((c) => c.id === step.compoundId) ?? null
   const parts = [
     row([
-      field('Compound', compoundPicker({
+      field('Compound', compoundControl(ctx, step.compoundId, compoundPicker({
         doc,
         value: step.compoundId,
         onPick: (choice) => pickCompound(ctx, step.id, 'compoundId', choice),
-      })),
+      }))),
       field('Vessel', el('input', {
         type: 'text',
         name: 'vessel',
@@ -128,10 +128,10 @@ function extractEditor(step, ctx) {
   const compound = doc.compounds.find((c) => c.id === step.solventId) ?? null
   return [
     row([
-      field('Solvent', compoundPicker({
+      field('Solvent', compoundControl(ctx, step.solventId, compoundPicker({
         doc, value: step.solventId, filter: 'solvent', placeholder: 'Select solvent',
         onPick: (choice) => pickCompound(ctx, step.id, 'solventId', choice),
-      })),
+      }))),
       selectField('Keep phase', {
         value: step.phaseKept,
         options: Object.entries(PHASES).map(([id, meta]) => [id, meta.label]),
@@ -147,10 +147,10 @@ function washEditor(step, ctx) {
   const { doc, row: metrics } = ctx
   const compound = doc.compounds.find((c) => c.id === step.solventId) ?? null
   return [
-    field('Wash solution', compoundPicker({
+    field('Wash solution', compoundControl(ctx, step.solventId, compoundPicker({
       doc, value: step.solventId, filter: 'solvent', placeholder: 'Select wash solution',
       onPick: (choice) => pickCompound(ctx, step.id, 'solventId', choice),
-    })),
+    }))),
     amountBlock(step, ctx, compound),
     derivedStrip(metrics, step),
   ]
@@ -195,10 +195,10 @@ function dryEditor(step, ctx) {
     })), (item) => actions.updateStep(step.id, { method: item.id }), { namespace: 'dryMethod' }),
   ]
   if (step.method === 'agent') {
-    parts.push(field('Drying agent', compoundPicker({
+    parts.push(field('Drying agent', compoundControl(ctx, step.agentId, compoundPicker({
       doc, value: step.agentId, filter: 'drying', placeholder: 'MgSO4 / Na2SO4…',
       onPick: (choice) => pickCompound(ctx, step.id, 'agentId', choice),
-    })))
+    }))))
   }
   parts.push(row([
     numberField('Temp', {

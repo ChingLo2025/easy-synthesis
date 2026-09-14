@@ -25,9 +25,8 @@ export function createPalette({ root, store, actions, onOpenCompounds, onOpenTem
     clear(root)
     root.append(
       moduleGroup(),
-      basisGroup(doc),
-      compoundGroup(doc),
-      templateGroup(),
+      // Wide screens: stacked under the modules. Narrow screens: a compact grid under the module strip
+      el('div', { class: 'palette__extras' }, [basisGroup(doc), compoundGroup(doc), templateGroup()]),
     )
   }
 

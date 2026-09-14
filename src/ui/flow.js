@@ -1,12 +1,12 @@
 // Flow diagram: central axis. Automatic layout, linear stacking, recursive branches, no layout engine.
 import { el } from './dom.js'
 import { iconMarkup } from './icons.js'
-import { inflowLabel, outflowLabel, stepSummary } from './summary.js'
+import { dropwiseParts, inflowLabel, outflowLabel, stepSummary } from './summary.js'
 import { FILTER_KEPT, FILTER_METHODS, STEP_TYPES } from '../model/steps.js'
 import { numberSteps } from '../model/schema.js'
 import { formatAmount, formatMass } from '../model/units.js'
 
-const ARROW_IN = '<svg class="flow__arrow" width="34" height="12" viewBox="0 0 34 12" aria-hidden="true"><path d="M1 6.5h25"/><polygon points="25.5,3 33,6.5 25.5,10"/></svg>'
+const ARROW_IN = '<svg class="flow__arrow" width="24" height="12" viewBox="0 0 24 12" aria-hidden="true"><path d="M1 6.5h15"/><polygon points="15.5,3 23,6.5 15.5,10"/></svg>'
 const LINK = '<svg width="12" height="24" viewBox="0 0 12 24" aria-hidden="true"><path d="M6.5 1v15"/><polygon points="3,15.5 6.5,22.5 10,15.5"/></svg>'
 
 export function renderFlow(doc, metrics, { selectedId = null, onSelect = null } = {}) {
@@ -108,12 +108,12 @@ function nodeTitle(step, meta, numbers) {
 }
 
 /** Nodes show conditions only; the materials go on the side arrows */
-function nodeDetail(step, row, doc) {
+export function nodeDetail(step, row, doc) {
   if (step.freeform) return step.freeform.split('\n')[0].slice(0, 48)
   if (step.type === 'add') {
     const bits = []
-    if (step.dissolve) bits.push('Pre-dissolve')
-    if (step.addMode === 'dropwise') bits.push('Dropwise')
+    if (step.dissolve) bits.push('Pre-dissolved')
+    if (step.addMode === 'dropwise') bits.push(...dropwiseParts(step))
     if (step.vessel) bits.push(step.vessel)
     if (step.note) bits.push(step.note)
     return bits.join(' · ')

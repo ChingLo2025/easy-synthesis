@@ -41,7 +41,13 @@
   tr { page-break-inside: avoid; break-inside: avoid; }
 
   .doc-section { page-break-inside: auto; }
-  .doc-footer { page-break-inside: avoid; break-inside: avoid; }
+  .doc-title { page-break-after: avoid; break-after: avoid; }
+  .metrics-scroll { overflow: visible; }
+
+  /* Compact flow so long procedures take fewer pages */
+  .flow__node { padding: 5px 9px; }
+  .flow__link svg { height: 16px; }
+  .flow__icon, .flow__icon .icon { width: 22px; height: 22px; }
 
   table.metrics { font-size: 9.5pt; }
   table.metrics thead { display: table-header-group; }

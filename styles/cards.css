@@ -163,6 +163,8 @@
 
 /* Compound picker */
 .picker { position: relative; }
+.picker-row { display: flex; gap: 6px; align-items: center; min-width: 0; }
+.picker-row .picker { flex: 1; min-width: 0; }
 .picker__list {
   position: absolute; z-index: 30; top: calc(100% + 3px); left: 0; right: 0;
   max-height: 260px; overflow: auto;
@@ -194,6 +196,13 @@
 .compound-row input, .compound-row select { min-height: 28px; font-size: 12.5px; padding: 3px 6px; }
 .compound-row__head { font-size: 11px; color: var(--ink-4); }
 .compound-row[data-basis="true"] { background: var(--accent-soft); border-radius: var(--radius-sm); }
+.compound-row[data-focus="true"] { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: var(--radius-sm); }
+/* Narrow screens: the compound table keeps its columns and scrolls sideways inside the dialog */
+@media screen and (max-width: 1024px) {
+  .compound-row { min-width: 640px; }
+  .modal-backdrop { padding: 10px; }
+  .modal { max-height: 90vh; }
+}
 
 /* Dialogs and toasts */
 .modal-root:empty { display: none; }

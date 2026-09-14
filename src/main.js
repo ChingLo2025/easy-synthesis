@@ -31,6 +31,8 @@ const nodes = {
   sequenceActions: document.getElementById('sequenceActions'),
   status: document.getElementById('statusbar'),
   sequencePanel: document.querySelector('.panel--sequence .panel__body'),
+  app: document.querySelector('.app'),
+  viewSwitch: document.getElementById('viewSwitch'),
 }
 
 initToaster(document.getElementById('toaster'))
@@ -46,7 +48,7 @@ const palette = createPalette({
   root: nodes.palette,
   store,
   actions,
-  onOpenCompounds: () => compoundsModal({ store, actions, onChange: () => render('change') }),
+  onOpenCompounds: () => openCompounds(),
   onOpenTemplates: openTemplates,
   onSaveTemplate: saveWholeTemplate,
 })
@@ -56,6 +58,7 @@ const sequence = createSequence({
   store,
   actions,
   getMetrics: () => metrics,
+  onEditCompound: (compoundId) => openCompounds(compoundId),
 })
 
 function restoreDocument() {
@@ -86,7 +89,7 @@ function render(reason) {
       metrics,
       tab: ui.tab ?? 'flow',
       selectedId: ui.selectedId,
-      onSelectStep: (stepId) => store.setUI({ selectedId: stepId }),
+      onSelectStep: selectFromPreview,
       onCopy: handleCopy,
     })
     renderStatus()
@@ -280,6 +283,10 @@ function iconButton(icon, title, onclick, disabled = false) {
 }
 
 // ── Commands ─────────────────────────────────────────────────────────────────
+function openCompounds(focusId = null) {
+  compoundsModal({ store, actions, focusId, onChange: () => render('change') })
+}
+
 async function importJson() {
   try {
     const doc = await pickDocument()
@@ -366,6 +373,37 @@ window.addEventListener('keydown', (event) => {
 nodes.sequencePanel?.addEventListener('scroll', () => {
   store.setUI({ scrollTop: nodes.sequencePanel.scrollTop }, { silent: true })
 }, { passive: true })
+
+// ── Narrow screens: Steps / Preview tabs instead of three columns ──────────────
+const NARROW = window.matchMedia('(max-width: 1024px)')
+
+// Both views share one scroll container, so each view remembers its own scroll position
+const viewScroll = { steps: 0, preview: 0 }
+
+function setView(view) {
+  const workspace = nodes.app.querySelector('.workspace')
+  const current = nodes.app.dataset.view
+  if (current === view) return
+  if (current) viewScroll[current] = workspace.scrollTop
+  nodes.app.dataset.view = view
+  workspace.scrollTop = viewScroll[view] ?? 0
+  for (const button of nodes.viewSwitch.querySelectorAll('[data-view]')) {
+    button.setAttribute('aria-selected', String(button.dataset.view === view))
+  }
+}
+
+/** Selecting a node in the preview; on narrow screens this also jumps to that step's card */
+function selectFromPreview(stepId) {
+  store.setUI({ selectedId: stepId })
+  if (!NARROW.matches) return
+  setView('steps')
+  nodes.sequence.querySelector(`[data-step-id="${CSS.escape(stepId)}"]`)?.scrollIntoView({ block: 'start' })
+}
+
+nodes.viewSwitch.addEventListener('click', (event) => {
+  const button = event.target.closest('[data-view]')
+  if (button) setView(button.dataset.view)
+})
 
 const metaInputs = mountMeta()
 store.subscribe((_state, reason) => render(reason))

@@ -1,4 +1,4 @@
-// Document panel: flow diagram on top, quantities table below, signature footer; the other tab is the Experimental section.
+// Document panel: title row with batch / date / operator, flow diagram, quantities table; the other tab is the Experimental section.
 import { el, clear } from './dom.js'
 import { iconMarkup } from './icons.js'
 import { renderFlow } from './flow.js'
@@ -22,20 +22,30 @@ export function renderDocument(host, { doc, metrics, tab, selectedId, onSelectSt
     const warnings = renderWarnings(metrics)
     if (warnings) host.append(section('To review', `${metrics.warnings.length} items`, warnings))
   }
-
-  host.append(footer(doc))
 }
 
+/** Batch, date and operator, shown once beside the title; empty values stay as blanks to fill in by hand */
+export function docMetaItems(meta = {}) {
+  return [
+    ['Batch', meta.batchNo ?? ''],
+    ['Date', meta.date ?? ''],
+    ['Operator', meta.author ?? ''],
+  ]
+}
+
+/** Title row: the title on the left, batch / date / operator beside it; the signature blank only prints */
 function titleBlock(doc) {
   const meta = doc.meta ?? {}
-  const bits = [
-    meta.author ? `Operator ${meta.author}` : null,
-    meta.batchNo ? `Batch ${meta.batchNo}` : null,
-    meta.date || null,
-  ].filter(Boolean)
+  const item = (label, value, extra = '') => el('span', { class: `doc-title__item${extra}` }, [
+    el('span', { class: 'doc-title__label' }, label),
+    value ? el('span', { class: 'doc-title__value' }, value) : el('span', { class: 'doc-title__blank' }),
+  ])
   return el('div', { class: 'doc-title' }, [
     el('h1', {}, meta.title || 'Untitled procedure'),
-    bits.length ? el('div', { class: 'doc-title__meta' }, bits.map((text) => el('span', {}, text))) : null,
+    el('div', { class: 'doc-title__meta' }, [
+      ...docMetaItems(meta).map(([label, value]) => item(label, value)),
+      item('Signature', '', ' only-print-inline'),
+    ]),
   ])
 }
 
@@ -93,26 +103,6 @@ function block(label, sentences, lang, onCopy) {
     ]),
     text,
   ])
-}
-
-/** Footer: batch no., date, operator, signature */
-function footer(doc) {
-  const meta = doc.meta ?? {}
-  const cells = [
-    ['Batch no.', meta.batchNo],
-    ['Date', meta.date],
-    ['Operator', meta.author],
-    ['Signature', ''],
-  ]
-  return el('footer', { class: 'doc-footer' }, cells.map(([label, value]) =>
-    el('div', { class: 'doc-footer__cell' }, [
-      el('div', {}, [
-        el('div', { class: 'doc-footer__label' }, label),
-        el('div', { class: 'doc-footer__value' }, value || ''),
-      ]),
-      el('div', { class: 'doc-footer__line' }),
-    ]),
-  ))
 }
 
 function countSteps(doc) {
