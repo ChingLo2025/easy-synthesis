@@ -23,7 +23,7 @@ Click *Load example* at the top of the right panel to see a complete procedure.
 - **Repeat, branches and manual entry**: open a card to set *Repeat* (xN), start a *Branch* (e.g. the aqueous layer), or switch to *Manual entry* for conditions the templates don't cover. Manual-entry steps are left blank in the narrative and marked for you to write.
 - **Theoretical yield**: set the product name, MW and equivalents at the bottom of the compounds dialog. Equivalents are counted against the basis, so a dimer is 0.5 and two products from one substrate are 2; leaving it empty means 1. Without a MW only moles are shown.
 - **Mixed extraction solvent**: an extraction takes an optional co-solvent and a ratio, e.g. EtOAc/hexane 1:1. The portion is split between the two in the quantities table and written as one mixture in the narrative.
-- **Hiding blocks**: the chevron beside Flow diagram, Quantities, Totals, To review and each narrative language hides that block. Hidden blocks are left out of the page and the printout, and the choice is remembered in this browser.
+- **Hiding blocks**: the chevron beside Flow diagram, Quantities, Totals, To review and each narrative language hides that block. Inside Quantities, each role group (Reactant, Reagent, Solvent…) has its own chevron, so you can drop just the solvents, for example. Hidden blocks and groups are left out of the page and the printout, and the choice is remembered in this browser.
 - **Undo**: Ctrl+Z to undo, Ctrl+Shift+Z or Ctrl+Y to redo.
 - **Templates**: save a whole procedure, or a group of steps such as a standard workup, and reuse it from *Templates* in the left panel.
 - **Phones and small windows**: at 1024 px wide and below, the layout switches to *Steps* / *Preview* tabs.

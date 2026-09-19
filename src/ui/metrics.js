@@ -15,7 +15,7 @@ const COLUMNS = [
   ['equiv', 'eq'],
 ]
 
-export function renderMetrics(doc, metrics) {
+export function renderMetrics(doc, metrics, { hidden = {}, onToggle = null } = {}) {
   const wrap = el('div', { style: { display: 'flex', flexDirection: 'column', gap: '14px' } })
   if (!metrics.rows.some((row) => row.compound)) {
     wrap.append(el('div', { class: 'flow__empty' }, 'Nothing to quantify yet. The table fills in automatically once you add materials.'))
@@ -30,9 +30,9 @@ export function renderMetrics(doc, metrics) {
   ])))
 
   const body = el('tbody')
-  for (const group of metrics.groups) {
-    body.append(el('tr', { class: 'metrics__group' }, el('th', { colSpan: 2 + COLUMNS.length }, ROLES[group.role]?.label ?? group.role)))
-    for (const row of group.rows) body.append(...dataRows(row))
+  for (const group of quantityGroups(metrics, hidden)) {
+    body.append(groupHeader(group, onToggle))
+    if (group.open) for (const row of group.rows) body.append(...dataRows(row))
   }
   table.append(body)
   // Scrolls sideways on narrow screens instead of widening the page
@@ -43,6 +43,36 @@ export function renderMetrics(doc, metrics) {
 /** Solvent and yield cards; their own block, so they can be hidden from the printout */
 export function renderTotals(doc, metrics) {
   return totals(doc, metrics)
+}
+
+/** Role groups with their hide state; ids share the document's hidden-blocks map as `role-<role>` */
+export function quantityGroups(metrics, hidden = {}) {
+  return metrics.groups.map((group) => {
+    const id = `role-${group.role}`
+    return { ...group, id, open: !hidden[id] }
+  })
+}
+
+/** A hidden group keeps its header on screen, so it can be shown again, but prints nothing */
+function groupHeader(group, onToggle) {
+  const label = ROLES[group.role]?.label ?? group.role
+  return el('tr', {
+    class: group.open ? 'metrics__group' : 'metrics__group no-print',
+    dataset: { hidden: String(!group.open) },
+  }, el('th', { colSpan: 2 + COLUMNS.length }, el('span', { class: 'metrics__group-head' }, [
+    onToggle
+      ? el('button', {
+          class: 'btn btn--ghost btn--icon no-print metrics__toggle',
+          type: 'button',
+          'aria-expanded': String(group.open),
+          title: group.open ? `Hide ${label} rows (hidden rows are not printed)` : `Show ${label} rows`,
+          onclick: () => onToggle(group.id),
+          html: iconMarkup(group.open ? 'chevronDown' : 'chevronRight', { size: 13 }),
+        })
+      : null,
+    el('span', {}, label),
+    group.open ? null : el('small', { class: 'muted' }, `${group.rows.length} hidden`),
+  ])))
 }
 
 function dataRows(row) {

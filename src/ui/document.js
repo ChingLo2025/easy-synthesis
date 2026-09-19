@@ -19,7 +19,7 @@ export function renderDocument(host, { doc, metrics, tab, selectedId, onSelectSt
     host.append(narrativeSection(doc, metrics, onCopy, { hidden, onToggle }))
   } else {
     host.append(part('flow', 'Flow diagram', `${countSteps(doc)} steps`, renderFlow(doc, metrics, { selectedId, onSelect: onSelectStep })))
-    host.append(part('quantities', 'Quantities', metrics.basis.compound ? `Basis: ${metrics.basis.compound.name}` : 'No basis set', renderMetrics(doc, metrics)))
+    host.append(part('quantities', 'Quantities', metrics.basis.compound ? `Basis: ${metrics.basis.compound.name}` : 'No basis set', renderMetrics(doc, metrics, { hidden, onToggle })))
     host.append(part('totals', 'Totals', 'Solvent and yield', renderTotals(doc, metrics)))
     const warnings = renderWarnings(metrics)
     if (warnings) host.append(part('warnings', 'To review', `${metrics.warnings.length} items`, warnings))

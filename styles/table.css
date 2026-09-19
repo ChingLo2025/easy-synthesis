@@ -68,6 +68,11 @@ table.metrics tr[data-freeform="true"] td { color: var(--ink-4); font-style: ita
   text-align: left;
   border-bottom-color: var(--line);
 }
+/* Each role group can be hidden on its own; a hidden group keeps its header on screen but prints nothing */
+.metrics__group-head { display: inline-flex; align-items: center; gap: 4px; }
+.metrics__toggle { width: 20px; height: 20px; margin-left: -4px; color: var(--ink-4); }
+.metrics__toggle:hover { color: var(--ink-2); }
+.metrics__group[data-hidden="true"] th { color: var(--ink-3); font-weight: 500; }
 .metrics__no { color: var(--ink-4); font-variant-numeric: tabular-nums; margin-right: 6px; }
 .metrics__repeat {
   font-size: 10.5px; color: var(--ink-3);
