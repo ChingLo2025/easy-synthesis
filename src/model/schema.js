@@ -51,6 +51,9 @@ const STEP_DEFAULTS = {
   extract: () => ({
     solventId: null,
     amount: { mode: 'volume', value: null },
+    // Optional co-solvent mixed into the same portion; the ratio splits the amount between the two
+    solvent2Id: null,
+    ratio: [1, 1],
     phaseKept: 'organic',
   }),
   wash: () => ({ solventId: null, amount: { mode: 'volume', value: null } }),
@@ -64,6 +67,19 @@ const STEP_DEFAULTS = {
   centrifuge: () => ({ speed: null, speedUnit: 'rpm', time: null, temp: null, kept: 'pellet' }),
   // Concentrate: time is optional; to-dryness is a separate toggle
   evaporate: () => ({ method: 'rotary', temp: null, pressure: null, time: null, toDryness: false }),
+  // Recrystallisation: dissolve hot, optional antisolvent, then cool and collect
+  recrystallize: () => ({
+    solventId: null,
+    amount: { mode: 'volume', value: null },
+    tempHot: null,
+    antisolventId: null,
+    antisolventVolume: null,
+    tempCold: null,
+    time: null,
+    filtered: true,
+  }),
+  // Column chromatography: the eluent is written but never quantified (no silica or solvent amounts)
+  column: () => ({ eluent: [], gradient: null }),
   dry: () => ({ method: 'agent', agentId: null, temp: null, time: null }),
   monitor: () => ({ method: 'TLC', interval: null, criteria: '' }),
 }
@@ -137,10 +153,13 @@ export function compoundById(doc, id) {
 
 /** All compound references in a step (including the pre-dissolve solvent). fn returns the new id; null clears it */
 export function mapCompoundRefs(step, fn) {
-  for (const field of ['compoundId', 'solventId', 'agentId']) {
+  for (const field of ['compoundId', 'solventId', 'solvent2Id', 'agentId', 'antisolventId']) {
     if (step[field]) step[field] = fn(step[field])
   }
   if (step.dissolve?.solventId) step.dissolve.solventId = fn(step.dissolve.solventId)
+  for (const item of step.eluent ?? []) {
+    if (item.solventId) item.solventId = fn(item.solventId)
+  }
 }
 
 /** Main-axis step numbers (1, 2, 3…); branches are 3.1, 3.2… */
@@ -164,10 +183,11 @@ export function numberSteps(steps) {
 export function normalizeDocument(input) {
   if (!input || typeof input !== 'object') throw new Error('Not a valid JSON object')
   const base = createDocument()
+  const meta = { ...base.meta, ...(input.meta ?? {}) }
   const doc = {
     ...input,
     version: SCHEMA_VERSION,
-    meta: { ...base.meta, ...(input.meta ?? {}) },
+    meta: { ...meta, product: normalizeProduct(meta.product) },
     basis: { ...base.basis, ...(input.basis ?? {}) },
     compounds: Array.isArray(input.compounds) ? input.compounds.map(normalizeCompound) : [],
     steps: Array.isArray(input.steps) ? input.steps.map(normalizeStep).filter(Boolean) : [],
@@ -213,6 +233,13 @@ function normalizeStep(raw) {
   if ('ramp' in step) step.ramp = raw.ramp === 'up' || raw.ramp === 'down' ? raw.ramp : null
   if ('rampRate' in step) step.rampRate = num(step.rampRate)
   if ('rinseCount' in step) step.rinseCount = Math.max(1, Math.round(num(raw.rinseCount) ?? 1))
+  if ('ratio' in step) step.ratio = normalizeRatio(raw.ratio)
+  if ('eluent' in step) step.eluent = normalizeEluent(raw.eluent)
+  if ('gradient' in step) step.gradient = normalizeParts(raw.gradient)
+  if ('antisolventVolume' in step) step.antisolventVolume = num(step.antisolventVolume)
+  if ('tempHot' in step) step.tempHot = num(step.tempHot)
+  if ('tempCold' in step) step.tempCold = num(step.tempCold)
+  if ('filtered' in step) step.filtered = Boolean(step.filtered)
   step.branch = raw.branch
     ? {
         label: str(raw.branch.label),
@@ -225,6 +252,36 @@ function normalizeStep(raw) {
 function normalizeDissolve(raw) {
   if (!raw || typeof raw !== 'object') return null
   return { solventId: raw.solventId ?? null, volume: num(raw.volume) }
+}
+
+/** The product drives the theoretical yield: equivalents against the basis, plus MW for the mass */
+function normalizeProduct(raw) {
+  if (!raw || typeof raw !== 'object') return null
+  return { name: str(raw.name), mw: num(raw.mw), equiv: num(raw.equiv) }
+}
+
+/** Mixing ratio for an extraction: two positive parts, 1:1 by default */
+function normalizeRatio(raw) {
+  const parts = normalizeParts(raw)
+  return parts && parts.length === 2 ? parts : [1, 1]
+}
+
+/** Eluent: [{ solventId, parts }] */
+function normalizeEluent(raw) {
+  if (!Array.isArray(raw)) return []
+  return raw
+    .filter((item) => item && typeof item === 'object')
+    .map((item) => ({ solventId: item.solventId ?? null, parts: positive(item.parts) }))
+}
+
+function normalizeParts(raw) {
+  if (!Array.isArray(raw) || !raw.length) return null
+  return raw.map(positive)
+}
+
+function positive(value) {
+  const parsed = num(value)
+  return parsed !== null && parsed > 0 ? parsed : 1
 }
 
 function num(v) {

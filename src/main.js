@@ -4,7 +4,7 @@ import { createDocument, normalizeDocument } from './model/schema.js'
 import { createSampleDocument } from './model/sample.js'
 import { createStore } from './state/store.js'
 import { createActions } from './state/actions.js'
-import { KEYS, load, throttledSave } from './state/persist.js'
+import { KEYS, load, save, throttledSave } from './state/persist.js'
 import { createPalette } from './ui/palette.js'
 import { createSequence } from './ui/sequence.js'
 import { DOC_TABS, renderDocument } from './ui/document.js'
@@ -13,7 +13,7 @@ import { initToaster, toast } from './ui/toast.js'
 import { append, clear, el, replaceChildren } from './ui/dom.js'
 import { iconMarkup } from './ui/icons.js'
 import { onTextInput } from './ui/fields.js'
-import { copyText, downloadDocument, pickDocument } from './io/json.js'
+import { copyText, downloadDocument, pickDocument, saveDocumentAs } from './io/json.js'
 import {
   deleteGroup, deleteTemplate, expandGroup, listGroups, listTemplates,
   saveGroup, saveTemplate, templateToDocument,
@@ -43,6 +43,8 @@ const actions = createActions(store)
 const autosave = throttledSave(KEYS.doc)
 
 let metrics = compute(store.getState().doc)
+// Document blocks the user has hidden; a hidden block is left out of the page, so it is not printed
+const hiddenSections = load(KEYS.sections, {}) ?? {}
 
 const palette = createPalette({
   root: nodes.palette,
@@ -91,6 +93,8 @@ function render(reason) {
       selectedId: ui.selectedId,
       onSelectStep: selectFromPreview,
       onCopy: handleCopy,
+      hidden: hiddenSections,
+      onToggle: toggleSection,
     })
     renderStatus()
     restoreFocus(focus, { keepRaw: reason === 'change' })
@@ -222,7 +226,7 @@ function renderTopActions() {
     iconButton('redo', 'Redo (Ctrl+Shift+Z)', () => store.redo(), !canRedo),
     el('span', { class: 'sep' }),
     iconButton('upload', 'Import JSON', importJson),
-    iconButton('download', 'Export JSON', () => downloadDocument(store.getState().doc)),
+    iconButton('download', 'Save JSON (Ctrl+S)', saveJson),
     el('button', { class: 'btn btn--primary', type: 'button', onclick: () => window.print() }, [
       el('span', { html: iconMarkup('print', { size: 15 }) }),
       el('span', {}, 'Print / PDF'),
@@ -285,6 +289,34 @@ function iconButton(icon, title, onclick, disabled = false) {
 // ── Commands ─────────────────────────────────────────────────────────────────
 function openCompounds(focusId = null) {
   compoundsModal({ store, actions, focusId, onChange: () => render('change') })
+}
+
+/** Hiding a block removes it from the page and from the printout; the choice is kept in this browser */
+function toggleSection(id) {
+  hiddenSections[id] = !hiddenSections[id]
+  save(KEYS.sections, hiddenSections)
+  render('ui')
+}
+
+/** Save: Chrome and Edge open a real save dialog (file name and folder); elsewhere ask for a name and download */
+async function saveJson() {
+  const doc = store.getState().doc
+  const result = await saveDocumentAs(doc)
+  if (result.cancelled) return
+  if (result.saved) {
+    toast(`Saved as ${result.name}`, { icon: 'download' })
+    return
+  }
+  promptModal({
+    title: 'Save JSON',
+    label: 'File name',
+    value: result.suggestedName,
+    confirmText: 'Save',
+    onConfirm: (name) => {
+      downloadDocument(doc, name)
+      toast(`Downloaded ${name.toLowerCase().endsWith('.json') ? name : `${name}.json`}`, { icon: 'download' })
+    },
+  })
 }
 
 async function importJson() {
@@ -365,7 +397,7 @@ window.addEventListener('keydown', (event) => {
     store.redo()
   } else if (key === 's') {
     event.preventDefault()
-    downloadDocument(store.getState().doc)
+    saveJson()
   }
 }, true)
 

@@ -178,7 +178,13 @@ export function compoundsModal({ store, actions, onChange, focusId = null }) {
         onInput: (mw) => patch({ mw }),
         onBlur: () => { store.flush(); onChange?.() },
       }), '110px'),
-      el('span', { class: 'muted', style: { fontSize: '12px' } }, 'Enter the MW to convert the theoretical yield to mass'),
+      applyWidth(numberInput({
+        value: product.equiv,
+        placeholder: 'eq vs basis',
+        onInput: (equiv) => patch({ equiv }),
+        onBlur: () => { store.flush(); onChange?.() },
+      }), '110px'),
+      el('span', { class: 'muted', style: { fontSize: '12px' } }, 'Equivalents against the basis (1 when empty); the MW converts the yield to mass'),
     ])
   }
 

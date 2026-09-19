@@ -32,14 +32,13 @@ export function compute(doc) {
     const number = numbers.get(step.id)
     const row = buildRow({ doc, step, depth, branchLabel, number, basis, warnings })
     rows.push(row)
-    const dissolve = dissolveRow({ doc, step, row, number, basis, warnings })
-    if (dissolve) {
-      row.dissolve = dissolve
-      rows.push(dissolve)
+    for (const aux of auxRows({ doc, step, row, number, basis, warnings })) {
+      row[aux.part] = aux
+      rows.push(aux)
     }
   }
 
-  // The pre-dissolve solvent is an auxiliary row; the step itself still maps to the main row
+  // Auxiliary rows (pre-dissolve, co-solvent, antisolvent) are extra; the step still maps to its main row
   const byStep = new Map(rows.filter((row) => !row.part).map((row) => [row.stepId, row]))
   return {
     basis,
@@ -143,6 +142,16 @@ function buildRow({ doc, step, depth, branchLabel, number, basis, warnings }) {
     })
   }
 
+  // Column chromatography: the eluent is written in the narrative but never quantified
+  if (step.type === 'column' && !step.eluent?.length) {
+    warnings.push({
+      level: WARN.warn,
+      stepId: step.id,
+      code: 'eluent-missing',
+      message: `Step ${number} (Column): no eluent set.`,
+    })
+  }
+
   if (!field) return row
 
   if (!compound) {
@@ -159,7 +168,7 @@ function buildRow({ doc, step, depth, branchLabel, number, basis, warnings }) {
   }
 
   const props = properties(compound)
-  const quantity = quantify(step.amount, props, basis)
+  const quantity = quantify(shareOf(step, 0), props, basis)
   Object.assign(row, quantity.value)
   row.equiv = basis.ok && isNum(row.n) ? row.n / basis.n : null
   row.incomplete = quantity.missing
@@ -179,30 +188,76 @@ function buildRow({ doc, step, depth, branchLabel, number, basis, warnings }) {
   return row
 }
 
-/** Pre-dissolve solvent: enters the vessel with the addition, gets its own row and counts toward total solvent */
-function dissolveRow({ doc, step, row, number, basis, warnings }) {
-  if (step.type !== 'add' || !step.dissolve || step.freeform) return null
-  const solvent = compoundById(doc, step.dissolve.solventId)
-  if (!solvent) {
-    warnings.push({ level: WARN.warn, stepId: step.id, code: 'dissolve-solvent', message: `Step ${number}: no pre-dissolve solvent selected.` })
-    return null
+/**
+ * Extraction with a co-solvent: one portion is shared between the two solvents by the ratio.
+ * Index 0 is the main solvent, index 1 the co-solvent.
+ */
+function shareOf(step, index) {
+  if (step.type !== 'extract' || !step.solvent2Id || !isNum(step.amount?.value)) {
+    return index === 0 ? step.amount : null
   }
-  if (!isNum(step.dissolve.volume)) {
-    warnings.push({ level: WARN.warn, stepId: step.id, code: 'dissolve-volume', message: `Step ${number}: the pre-dissolve solvent volume is not set.` })
+  const [a, b] = ratioParts(step)
+  return { ...step.amount, value: step.amount.value * ((index === 0 ? a : b) / (a + b)) }
+}
+
+function ratioParts(step) {
+  const [a, b] = Array.isArray(step.ratio) ? step.ratio : [1, 1]
+  return [isNum(a) && a > 0 ? a : 1, isNum(b) && b > 0 ? b : 1]
+}
+
+/**
+ * Auxiliary rows belong to a step but are not the step's own compound: the pre-dissolve solvent,
+ * the extraction co-solvent and the recrystallisation antisolvent. They are quantified and counted
+ * in the solvent totals, while the step itself still maps to its main row.
+ */
+function auxRows({ doc, step, row, number, basis, warnings }) {
+  if (step.freeform) return []
+  const out = []
+
+  if (step.type === 'add' && step.dissolve) {
+    const solvent = compoundById(doc, step.dissolve.solventId)
+    if (!solvent) {
+      warnings.push({ level: WARN.warn, stepId: step.id, code: 'dissolve-solvent', message: `Step ${number}: no pre-dissolve solvent selected.` })
+    } else {
+      if (!isNum(step.dissolve.volume)) {
+        warnings.push({ level: WARN.warn, stepId: step.id, code: 'dissolve-volume', message: `Step ${number}: the pre-dissolve solvent volume is not set.` })
+      }
+      out.push(auxRow('dissolve', solvent, { mode: 'volume', value: step.dissolve.volume }, { step, row, number, basis }))
+    }
   }
-  const quantity = quantify({ mode: 'volume', value: step.dissolve.volume }, properties(solvent), basis)
+
+  if (step.type === 'extract' && step.solvent2Id) {
+    const solvent = compoundById(doc, step.solvent2Id)
+    if (solvent) out.push(auxRow('cosolvent', solvent, shareOf(step, 1), { step, row, number, basis }))
+  }
+
+  if (step.type === 'recrystallize' && step.antisolventId) {
+    const solvent = compoundById(doc, step.antisolventId)
+    if (solvent) {
+      if (!isNum(step.antisolventVolume)) {
+        warnings.push({ level: WARN.warn, stepId: step.id, code: 'antisolvent-volume', message: `Step ${number}: the antisolvent volume is not set.` })
+      }
+      out.push(auxRow('antisolvent', solvent, { mode: 'volume', value: step.antisolventVolume }, { step, row, number, basis }))
+    }
+  }
+
+  return out
+}
+
+function auxRow(part, compound, amount, { step, row, number, basis }) {
+  const quantity = quantify(amount, properties(compound), basis)
   const { n, mass, volume } = quantity.value
   return {
     stepId: step.id,
-    part: 'dissolve',
+    part,
     number,
     type: step.type,
     depth: row.depth,
     branchLabel: row.branchLabel,
     repeat: row.repeat,
-    compound: solvent,
-    role: solvent.role,
-    driver: 'volume',
+    compound,
+    role: compound.role,
+    driver: amount?.mode ?? 'volume',
     freeform: false,
     n,
     mass,
@@ -345,14 +400,20 @@ function solventTotals(rows) {
   return { reaction: hasReaction ? reaction : null, total: hasTotal ? total : null }
 }
 
-/** Theoretical yield: capped by the basis moles; the product MW is optional in meta.product */
+/**
+ * Theoretical yield: basis moles x the product equivalents (1 unless set), converted to mass with the MW.
+ * A dimer is 0.5 eq, two products from one substrate are 2 eq.
+ */
 function theoreticalYield(doc, basis) {
   const product = doc.meta?.product ?? null
   const mw = mwToSI(product?.mw)
+  const equiv = isNum(product?.equiv) && product.equiv > 0 ? product.equiv : 1
+  const n = basis.ok ? basis.n * equiv : null
   return {
     name: product?.name ?? '',
-    n: basis.ok ? basis.n : null,
-    mass: basis.ok && mw ? basis.n * mw : null,
+    equiv,
+    n,
+    mass: isNum(n) && mw ? n * mw : null,
     hasProduct: Boolean(product?.name || product?.mw),
   }
 }

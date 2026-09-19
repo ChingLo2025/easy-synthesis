@@ -15,6 +15,8 @@ const MODULE_HINTS = {
   filter: 'Vacuum, Celite',
   centrifuge: 'Speed, keep a phase',
   evaporate: 'Rotavap, distillation',
+  recrystallize: 'Solvent, antisolvent',
+  column: 'Eluent, gradient',
   dry: 'Drying agent, oven',
   monitor: 'TLC, HPLC',
 }

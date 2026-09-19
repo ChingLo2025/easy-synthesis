@@ -4,7 +4,7 @@
 //   Pure template step: both Chinese and English are generated normally
 //   With a note       : Chinese is generated with the note appended verbatim; English is left blank
 //   With freeform     : both Chinese and English are left blank
-import { numberSteps, flattenSteps } from '../model/schema.js'
+import { compoundById, numberSteps, flattenSteps } from '../model/schema.js'
 import { ATMOSPHERES, DRY_METHODS, EVAPORATE_METHODS, FILTER_METHODS, MONITOR_METHODS, PHASES, RAMPS, STIR_SPECIALS } from '../model/steps.js'
 import { speedText } from './summary.js'
 import {
@@ -180,7 +180,7 @@ function clauseZh(step, row, doc) {
     }
     case 'extract': {
       const kept = PHASES[step.phaseKept]?.zh ?? '有機層'
-      return `以${sp(compoundName(row, 'zh'))}${volumeParen(row)} 萃取${countZh(step.repeat)}，合併${kept}`
+      return `以${sp(solventName(step, row, 'zh'))}${solventParen(step, row)} 萃取${countZh(step.repeat)}，合併${kept}`
     }
     case 'wash':
       return `以${sp(compoundName(row, 'zh'))}${volumeParen(row)} 洗滌${countZh(step.repeat)}`
@@ -221,6 +221,18 @@ function clauseZh(step, row, doc) {
       const collect = step.kept === 'supernatant' ? '收集上清液' : '收集沉澱'
       return `${speed ? `以 ${speed} ` : ''}離心${time}${temp}${repeatZh(step)}，${collect}`
     }
+    case 'recrystallize': {
+      const hot = isNum(step.tempHot) ? ` 於 ${sig(step.tempHot)} °C` : ''
+      const bits = [`以${sp(compoundName(row, 'zh'))}${volumeParen(row)}${hot} 溶解`]
+      if (row?.antisolvent) bits.push(`加入${sp(compoundName(row.antisolvent, 'zh'))}${volumeParen(row.antisolvent)}`)
+      if (isNum(step.tempCold)) {
+        bits.push(`降溫至 ${sig(step.tempCold)} °C${isNum(step.time) ? ` 保持 ${formatDuration(step.time)}` : ''}`)
+      }
+      bits.push(step.filtered ? '過濾收集晶體' : '收集晶體')
+      return bits.join('，')
+    }
+    case 'column':
+      return `以${sp(eluentText(step, doc, 'zh'))} 進行矽膠管柱層析`
     default:
       return ''
   }
@@ -268,7 +280,7 @@ function clauseEn(step, row, doc) {
     }
     case 'extract': {
       const kept = PHASES[step.phaseKept]?.labelEn ?? 'organic layer'
-      return `the mixture was extracted with ${compoundName(row, 'en')}${volumeParen(row, step.repeat)} and the combined ${kept}s were kept`
+      return `the mixture was extracted with ${solventName(step, row, 'en')}${solventParen(step, row, step.repeat)} and the combined ${kept}s were kept`
     }
     case 'wash':
       return `washed with ${compoundName(row, 'en')}${volumeParen(row, step.repeat)}`
@@ -309,6 +321,18 @@ function clauseEn(step, row, doc) {
       const kept = step.kept === 'supernatant' ? 'the supernatant was collected' : 'the pellet was collected'
       return `the mixture was centrifuged${at}${time}${temp}${repeatEn(step)}, and ${kept}`
     }
+    case 'recrystallize': {
+      const hot = isNum(step.tempHot) ? ` at ${sig(step.tempHot)} °C` : ''
+      const bits = [`the solid was recrystallised from ${compoundName(row, 'en')}${volumeParen(row)}${hot}`]
+      if (row?.antisolvent) bits.push(`${compoundName(row.antisolvent, 'en')}${volumeParen(row.antisolvent)} was added`)
+      if (isNum(step.tempCold)) {
+        bits.push(`the mixture was cooled to ${sig(step.tempCold)} °C${isNum(step.time) ? ` for ${formatDurationEn(step.time)}` : ''}`)
+      }
+      bits.push(step.filtered ? 'the crystals were collected by filtration' : 'the crystals were collected')
+      return joinEnClauses(bits)
+    }
+    case 'column':
+      return `the residue was purified by silica gel column chromatography (${eluentText(step, doc, 'en')})`
     default:
       return ''
   }
@@ -342,6 +366,42 @@ function quantityParen(step, row, lang = 'zh') {
   const clean = bits.filter(Boolean)
   if (row.repeat > 1) clean.push(lang === 'zh' ? `每次，共 ${row.repeat} 次` : `x ${row.repeat}`)
   return clean.length ? ` (${clean.join(', ')})` : ''
+}
+
+/** A mixed extraction solvent reads as "EtOAc/Hexane"; a single one is just its name */
+function solventName(step, row, lang) {
+  const first = compoundName(row, lang)
+  return row?.cosolvent ? `${first}/${compoundName(row.cosolvent, lang)}` : first
+}
+
+/** "(50 mL)" for one solvent, "(1:1, 50 mL)" for a mixture; a repeat adds "x 3" */
+function solventParen(step, row, repeat = 1) {
+  const volume = formatVolume(mixVolume(row))
+  if (!volume) return ''
+  const amount = repeat > 1 ? `${volume} x ${repeat}` : volume
+  return row?.cosolvent ? ` (${ratioText(step.ratio)}, ${amount})` : ` (${amount})`
+}
+
+/** The portion of a mixed solvent is the two shares together */
+function mixVolume(row) {
+  const main = row?.volume ?? null
+  const extra = row?.cosolvent?.volume ?? null
+  if (!isNum(main)) return extra
+  return isNum(extra) ? main + extra : main
+}
+
+function ratioText(parts) {
+  return (Array.isArray(parts) ? parts : [1, 1]).map((part) => sig(part)).join(':')
+}
+
+/** Eluent: "EtOAc/Hexane (1:4)" in Chinese, "EtOAc/hexane, 1:4" in English; a gradient adds "→ 1:1" */
+function eluentText(step, doc, lang) {
+  const entries = step.eluent ?? []
+  if (!entries.length) return lang === 'zh' ? '未指定沖提液' : 'eluent not set'
+  const names = entries.map((item) => compoundName({ compound: compoundById(doc, item.solventId) }, lang)).join('/')
+  const ratio = ratioText(entries.map((item) => item.parts ?? 1))
+  const gradient = step.gradient?.length ? ` → ${ratioText(step.gradient)}` : ''
+  return lang === 'zh' ? `${names} (${ratio}${gradient})` : `${names}, ${ratio}${gradient}`
 }
 
 function volumeParen(row, repeat = 1) {

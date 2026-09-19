@@ -2,7 +2,7 @@
 import { el, clear } from './dom.js'
 import { iconMarkup } from './icons.js'
 import { renderFlow } from './flow.js'
-import { renderMetrics, renderWarnings } from './metrics.js'
+import { renderMetrics, renderTotals, renderWarnings } from './metrics.js'
 import { generateNarrative, isMarker, narrativeToText } from './narrative.js'
 
 export const DOC_TABS = [
@@ -10,17 +10,19 @@ export const DOC_TABS = [
   { id: 'text', label: 'Experimental', icon: 'text' },
 ]
 
-export function renderDocument(host, { doc, metrics, tab, selectedId, onSelectStep, onCopy }) {
+export function renderDocument(host, { doc, metrics, tab, selectedId, onSelectStep, onCopy, hidden = {}, onToggle = null }) {
   clear(host)
+  const part = (id, title, hint, body) => section({ id, title, hint, body, hidden, onToggle })
   host.append(titleBlock(doc))
 
   if (tab === 'text') {
-    host.append(narrativeSection(doc, metrics, onCopy))
+    host.append(narrativeSection(doc, metrics, onCopy, { hidden, onToggle }))
   } else {
-    host.append(section('Flow diagram', `${countSteps(doc)} steps`, renderFlow(doc, metrics, { selectedId, onSelect: onSelectStep })))
-    host.append(section('Quantities', metrics.basis.compound ? `Basis: ${metrics.basis.compound.name}` : 'No basis set', renderMetrics(doc, metrics)))
+    host.append(part('flow', 'Flow diagram', `${countSteps(doc)} steps`, renderFlow(doc, metrics, { selectedId, onSelect: onSelectStep })))
+    host.append(part('quantities', 'Quantities', metrics.basis.compound ? `Basis: ${metrics.basis.compound.name}` : 'No basis set', renderMetrics(doc, metrics)))
+    host.append(part('totals', 'Totals', 'Solvent and yield', renderTotals(doc, metrics)))
     const warnings = renderWarnings(metrics)
-    if (warnings) host.append(section('To review', `${metrics.warnings.length} items`, warnings))
+    if (warnings) host.append(part('warnings', 'To review', `${metrics.warnings.length} items`, warnings))
   }
 }
 
@@ -49,14 +51,32 @@ function titleBlock(doc) {
   ])
 }
 
-function section(title, hint, body) {
-  return el('section', { class: 'doc-section' }, [
-    el('div', { class: 'doc-section__head' }, [el('h3', {}, title), hint ? el('small', {}, hint) : null]),
-    body,
+/** A document block. A hidden block is left out of the page, so it is not printed either. */
+function section({ id, title, hint, body, hidden = {}, onToggle = null }) {
+  const open = !hidden[id]
+  return el('section', { class: 'doc-section', dataset: { hidden: String(!open) } }, [
+    el('div', { class: 'doc-section__head' }, [
+      sectionToggle(id, open, onToggle),
+      el('h3', {}, title),
+      hint ? el('small', {}, hint) : null,
+    ]),
+    open ? body : null,
   ])
 }
 
-function narrativeSection(doc, metrics, onCopy) {
+function sectionToggle(id, open, onToggle) {
+  if (!onToggle) return null
+  return el('button', {
+    class: 'btn btn--ghost btn--icon no-print doc-section__toggle',
+    type: 'button',
+    'aria-expanded': String(open),
+    title: open ? 'Hide this block (hidden blocks are not printed)' : 'Show this block',
+    onclick: () => onToggle(id),
+    html: iconMarkup(open ? 'chevronDown' : 'chevronRight', { size: 14 }),
+  })
+}
+
+function narrativeSection(doc, metrics, onCopy, { hidden = {}, onToggle = null } = {}) {
   const narrative = generateNarrative(doc, metrics)
   const wrap = el('div', { class: 'narrative' })
 
@@ -76,12 +96,13 @@ function narrativeSection(doc, metrics, onCopy) {
     el('span', { style: { marginLeft: 'auto' } }, pending),
   ]))
 
-  wrap.append(block('Chinese', narrative.zh, 'zh', onCopy))
-  wrap.append(block('English', narrative.en, 'en', onCopy))
+  wrap.append(block('Chinese', narrative.zh, 'zh', onCopy, { hidden, onToggle }))
+  wrap.append(block('English', narrative.en, 'en', onCopy, { hidden, onToggle }))
   return wrap
 }
 
-function block(label, sentences, lang, onCopy) {
+function block(label, sentences, lang, onCopy, { hidden = {}, onToggle = null } = {}) {
+  const open = !hidden[`narrative-${lang}`]
   const text = el('p', { class: `narrative__text${lang === 'en' ? ' narrative__text--en' : ''}` })
   if (!sentences.length) {
     text.append(el('span', { class: 'muted' }, 'No content yet'))
@@ -93,6 +114,7 @@ function block(label, sentences, lang, onCopy) {
   }
   return el('div', { class: 'narrative__block' }, [
     el('div', { class: 'narrative__label', style: { display: 'flex', alignItems: 'center', gap: '8px' } }, [
+      sectionToggle(`narrative-${lang}`, open, onToggle),
       el('span', {}, label),
       el('button', {
         class: 'btn btn--ghost no-print',
@@ -101,7 +123,7 @@ function block(label, sentences, lang, onCopy) {
         onclick: () => onCopy?.(narrativeToText(sentences, lang), sentences.some(isMarker)),
       }, [el('span', { html: iconMarkup('copy', { size: 13 }) }), el('span', {}, 'Copy plain text')]),
     ]),
-    text,
+    open ? text : null,
   ])
 }
 

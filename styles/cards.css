@@ -161,6 +161,11 @@
 }
 .branch-block__head .icon { width: 15px; height: 15px; }
 
+/* Column eluent: solvent, parts, and the gradient target when a gradient is on */
+.eluent-list { display: grid; gap: 6px; }
+.eluent-row { display: grid; grid-template-columns: minmax(0, 1fr) 62px 30px; gap: 6px; align-items: center; }
+.eluent-row[data-gradient="true"] { grid-template-columns: minmax(0, 1fr) 62px 62px 30px; }
+
 /* Compound picker */
 .picker { position: relative; }
 .picker-row { display: flex; gap: 6px; align-items: center; min-width: 0; }

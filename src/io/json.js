@@ -1,10 +1,43 @@
 // JSON import/export. Lossless round-trip: normalize only fills in fields and never drops unknown ones.
 import { normalizeDocument, serializeDocument } from '../model/schema.js'
 
-export function downloadDocument(doc) {
-  const text = serializeDocument(doc)
-  const name = safeFileName(doc.meta?.title || 'synthesis-procedure')
-  download(`${name}.json`, text, 'application/json')
+/** Suggested file name from the procedure title */
+export function defaultFileName(doc) {
+  return `${safeFileName(doc.meta?.title || 'synthesis-procedure')}.json`
+}
+
+/** Chrome and Edge can open a real save dialog, where both the name and the folder are chosen */
+export function hasSaveDialog() {
+  return typeof window !== 'undefined' && typeof window.showSaveFilePicker === 'function'
+}
+
+/**
+ * Save through the browser's save dialog.
+ * { saved: true, name } when written, { cancelled: true } when dismissed,
+ * { saved: false, suggestedName } when the dialog is unavailable and the caller should ask for a name.
+ */
+export async function saveDocumentAs(doc) {
+  const suggestedName = defaultFileName(doc)
+  if (!hasSaveDialog()) return { saved: false, suggestedName }
+  try {
+    const handle = await window.showSaveFilePicker({
+      suggestedName,
+      types: [{ description: 'Procedure JSON', accept: { 'application/json': ['.json'] } }],
+    })
+    const stream = await handle.createWritable()
+    await stream.write(serializeDocument(doc))
+    await stream.close()
+    return { saved: true, name: handle.name }
+  } catch (error) {
+    if (error?.name === 'AbortError') return { cancelled: true }
+    return { saved: false, suggestedName }
+  }
+}
+
+/** Fallback for browsers without a save dialog: download under the given name */
+export function downloadDocument(doc, fileName = null) {
+  const name = (fileName ?? '').trim() || defaultFileName(doc)
+  download(name.toLowerCase().endsWith('.json') ? name : `${name}.json`, serializeDocument(doc), 'application/json')
 }
 
 export function download(filename, text, type = 'text/plain') {

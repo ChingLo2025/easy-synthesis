@@ -5,6 +5,9 @@ import { iconMarkup } from './icons.js'
 import { ROLES } from '../model/steps.js'
 import { formatAmount, formatEquiv, formatMass, formatVolume } from '../model/units.js'
 
+/** Auxiliary rows are tagged so the table shows why a solvent is listed twice */
+const PART_LABELS = { dissolve: 'pre-dissolve', cosolvent: 'co-solvent', antisolvent: 'antisolvent' }
+
 const COLUMNS = [
   ['n', 'mol'],
   ['mass', 'g'],
@@ -34,8 +37,12 @@ export function renderMetrics(doc, metrics) {
   table.append(body)
   // Scrolls sideways on narrow screens instead of widening the page
   wrap.append(el('div', { class: 'metrics-scroll' }, table))
-  wrap.append(totals(doc, metrics))
   return wrap
+}
+
+/** Solvent and yield cards; their own block, so they can be hidden from the printout */
+export function renderTotals(doc, metrics) {
+  return totals(doc, metrics)
 }
 
 function dataRows(row) {
@@ -64,7 +71,7 @@ function dataRow(row, { copy }) {
     el('td', {}, [
       el('span', { class: 'metrics__no' }, row.number + (row.repeat > 1 ? ` (${copy + 1}/${row.repeat})` : '')),
       row.branchLabel ? el('small', { class: 'muted' }, row.branchLabel) : null,
-      row.part === 'dissolve' ? el('small', { class: 'muted' }, ' pre-dissolve') : null,
+      row.part ? el('small', { class: 'muted' }, ` ${PART_LABELS[row.part] ?? row.part}`) : null,
       row.repeat > 1 && copy === 0 ? el('span', { class: 'metrics__repeat screen-only' }, `x${row.repeat}`) : null,
     ]),
     ...cells,
@@ -106,9 +113,13 @@ function totals(doc, metrics) {
     const value = metrics.theoretical.mass !== null
       ? formatMass(metrics.theoretical.mass)
       : formatAmount(metrics.theoretical.n)
-    cards.push(totalCard('Theoretical yield', value, metrics.theoretical.hasProduct
-      ? metrics.theoretical.name || 'Assuming 100% conversion of the basis'
-      : 'Set the product MW to get mass'))
+    const hint = [
+      metrics.theoretical.hasProduct
+        ? metrics.theoretical.name || 'Assuming 100% conversion of the basis'
+        : 'Set the product MW to get mass',
+      metrics.theoretical.equiv !== 1 ? `${formatEquiv(metrics.theoretical.equiv)} eq vs basis` : null,
+    ].filter(Boolean).join(' · ')
+    cards.push(totalCard('Theoretical yield', value, hint))
   }
   return el('div', { class: 'totals' }, cards)
 }

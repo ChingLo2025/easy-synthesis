@@ -11,17 +11,19 @@ Nothing to install. It runs in any modern browser, on a computer or a phone.
 ### Getting started
 
 1. **Set the basis.** In the left panel, pick the limiting reagent under *Basis* and enter its amount. All equivalents are calculated against it.
-2. **Add steps.** Click a module (Add, Stir, Extract, Wash, Filter, Centrifuge, Concentrate, Dry, Monitor) to append a step, then click the card to fill it in. Drag the handle on the left of a card to reorder.
+2. **Add steps.** Click a module (Add, Stir, Extract, Wash, Filter, Centrifuge, Concentrate, Recrystallize, Column, Dry, Monitor) to append a step, then click the card to fill it in. Drag the handle on the left of a card to reorder.
 3. **Edit compound details.** The pencil button next to a compound opens the compounds dialog on that compound, where you set MW, density, CAS, purity and concentration. The *Compounds* button in the left panel opens the full list.
 4. **Check the output.** The right panel shows the flow diagram and quantities table (*Flow & quantities*) and the generated Chinese and English text (*Experimental*), each with *Copy plain text*.
-5. **Print.** *Print / PDF* prints the tab that is showing; choose "Save as PDF" in the print dialog to get a PDF.
+5. **Print.** *Print / PDF* prints the tab that is showing; choose "Save as PDF" in the print dialog to get a PDF. Use the chevron beside a block heading to hide blocks you don't want on paper, such as the totals.
 
 Click *Load example* at the top of the right panel to see a complete procedure.
 
 ### Handy to know
 
 - **Repeat, branches and manual entry**: open a card to set *Repeat* (xN), start a *Branch* (e.g. the aqueous layer), or switch to *Manual entry* for conditions the templates don't cover. Manual-entry steps are left blank in the narrative and marked for you to write.
-- **Theoretical yield**: set the product name and MW at the bottom of the compounds dialog; without a MW only moles are shown.
+- **Theoretical yield**: set the product name, MW and equivalents at the bottom of the compounds dialog. Equivalents are counted against the basis, so a dimer is 0.5 and two products from one substrate are 2; leaving it empty means 1. Without a MW only moles are shown.
+- **Mixed extraction solvent**: an extraction takes an optional co-solvent and a ratio, e.g. EtOAc/hexane 1:1. The portion is split between the two in the quantities table and written as one mixture in the narrative.
+- **Hiding blocks**: the chevron beside Flow diagram, Quantities, Totals, To review and each narrative language hides that block. Hidden blocks are left out of the page and the printout, and the choice is remembered in this browser.
 - **Undo**: Ctrl+Z to undo, Ctrl+Shift+Z or Ctrl+Y to redo.
 - **Templates**: save a whole procedure, or a group of steps such as a standard workup, and reuse it from *Templates* in the left panel.
 - **Phones and small windows**: at 1024 px wide and below, the layout switches to *Steps* / *Preview* tabs.
@@ -30,7 +32,7 @@ Click *Load example* at the top of the right panel to see a complete procedure.
 
 Everything is saved automatically, but only in this browser (localStorage). Nothing is uploaded, and nothing syncs between devices or browsers.
 
-- **Keep a copy or move to another device**: *Export JSON* (download icon at the top, or Ctrl+S), then *Import JSON* (upload icon) on the other device.
+- **Keep a copy or move to another device**: *Save JSON* (download icon at the top, or Ctrl+S), then *Import JSON* (upload icon) on the other device. Chrome and Edge open a save dialog where you pick the folder and the file name; other browsers ask for a name and then download it.
 - **Before clearing browser data or switching browsers**, export first, or the procedure, personal reagent library and templates are lost.
 
 ### Not supported yet
@@ -62,7 +64,7 @@ styles/
 src/
   model/
     units.js          SI conversion and formatting (internally mol / kg / m³)
-    steps.js          Central definition of the nine step types and enums
+    steps.js          Central definition of the eleven step types and enums
     schema.js         Construction, traversal, normalization, round-trip
     reagents.js       Built-in reagent library (33 solvents/reagents + 8 drying agents, with CAS/MW/density/bp)
     library.js        Personal reagent library (localStorage)
@@ -76,10 +78,11 @@ src/
     prefs.js          Button usage frequency, last-used values
     persist.js        Thin localStorage wrapper
   ui/
-    palette.js        Left panel: nine modules, basis, templates
+    palette.js        Left panel: eleven modules, basis, templates
     sequence.js       Card sequence, xN, branches, freeform, drag-to-reorder
     editors.js        Field editors per step type
     editors-workup.js Filtration and centrifugation editors
+    editors-purify.js Recrystallisation and column chromatography editors
     editor-parts.js   Shared editor parts (amounts, derived values, compound edit button, pre-dissolve)
     fields.js         Field widgets and quick condition buttons
     picker.js         Compound picker
@@ -108,6 +111,8 @@ tests/                node:test tests
 - **Printing**: prints the current tab. The flow diagram and quantities table are stacked on one page; the narrative is a separate tab. Batch, date and operator appear once, beside the title (with a signature blank that only prints), instead of in a separate footer, so long procedures take fewer pages.
 - **Narrow screens**: at 1024 px and below, the three columns collapse into Steps / Preview tabs, each keeping its own scroll position. The flow diagram adapts with a container query, so it also fits the narrow right column of a small window.
 - **Theoretical yield**: stored as the optional `meta.product = { name, mw }`, capped by the basis moles.
+- **Auxiliary rows**: the pre-dissolve solvent, the extraction co-solvent and the recrystallisation antisolvent each get their own quantities row, tagged with what they are, while the step still maps to its main row.
+- **Column chromatography**: the eluent and any gradient are written into the narrative, but nothing about the column is quantified: no silica, no solvent volumes, and no rows in the quantities table.
 - **Branch depth**: soft limit of two levels. A third level can't be created; the second level is flagged under "To review".
-- **Frequency ordering**: applies to quick condition buttons (atmosphere, temperature, time, method, etc.); the nine modules keep a fixed order so the interface doesn't jump around.
+- **Frequency ordering**: applies to quick condition buttons (atmosphere, temperature, time, method, etc.); the eleven modules keep a fixed order so the interface doesn't jump around.
 - **Storage**: all state lives in localStorage behind `persist.js`, which never lets a full quota or private mode crash the app. JSON export/import round-trips losslessly and keeps unknown fields.

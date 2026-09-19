@@ -8,6 +8,7 @@ export const KEYS = {
   groups: 'groups',
   frequency: 'frequency',
   lastUsed: 'last-used',
+  sections: 'hidden-sections',
 }
 
 function fullKey(key) {

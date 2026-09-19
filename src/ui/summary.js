@@ -30,8 +30,8 @@ const SUMMARIES = {
     (step.special ?? []).map((id) => STIR_SPECIALS[id]?.label).filter(Boolean).join(', ') || null,
   ],
   extract: (step, row) => [
-    compoundName(row),
-    quantityText(step, row),
+    mixName(row),
+    step.solvent2Id ? mixAmountText(step, row) : quantityText(step, row),
     `Keep ${PHASES[step.phaseKept]?.labelEn ?? 'organic layer'}`,
   ],
   wash: (step, row) => [compoundName(row), quantityText(step, row)],
@@ -59,6 +59,15 @@ const SUMMARIES = {
     step.temp !== null && step.temp !== undefined ? `${sig(step.temp)} °C` : null,
     formatDurationEn(step.time),
   ],
+  recrystallize: (step, row, doc) => [
+    compoundName(row),
+    quantityText(step, row),
+    isNum(step.tempHot) ? `${sig(step.tempHot)} °C` : null,
+    step.antisolventId ? `+ ${compoundNameById(doc, step.antisolventId) ?? 'antisolvent'}` : null,
+    isNum(step.tempCold) ? `to ${sig(step.tempCold)} °C` : null,
+    formatDurationEn(step.time),
+  ],
+  column: (step, row, doc) => [eluentSummary(step, doc)],
   monitor: (step) => [
     MONITOR_METHODS[step.method]?.label,
     step.interval ? `every ${formatDurationEn(step.interval)}` : 'no interval',
@@ -68,6 +77,36 @@ const SUMMARIES = {
 
 function compoundName(row) {
   return row?.compound?.name || null
+}
+
+function compoundNameById(doc, id) {
+  return doc?.compounds?.find((compound) => compound.id === id)?.name || null
+}
+
+/** A mixed extraction solvent reads as "EtOAc/Hexane" */
+function mixName(row) {
+  const second = row?.cosolvent?.compound?.name
+  return second ? `${compoundName(row) ?? '?'}/${second}` : compoundName(row)
+}
+
+/** Mixtures show the whole portion and the ratio: "50 mL (1:1)" */
+function mixAmountText(step, row) {
+  const main = row?.volume ?? null
+  const extra = row?.cosolvent?.volume ?? null
+  const total = isNum(main) && isNum(extra) ? main + extra : main ?? extra
+  const volume = formatVolume(total)
+  const ratio = (Array.isArray(step.ratio) ? step.ratio : [1, 1]).map((part) => sig(part)).join(':')
+  return volume ? `${volume} (${ratio})` : `(${ratio})`
+}
+
+/** "EtOAc/Hexane 1:4" for the card and the flow node */
+export function eluentSummary(step, doc) {
+  const entries = step.eluent ?? []
+  if (!entries.length) return 'No eluent'
+  const names = entries.map((item) => compoundNameById(doc, item.solventId) ?? '?').join('/')
+  const ratio = entries.map((item) => sig(item.parts ?? 1)).join(':')
+  const gradient = step.gradient?.length ? ` → ${step.gradient.map((part) => sig(part)).join(':')}` : ''
+  return `${names} ${ratio}${gradient}`
 }
 
 /** Show the driving field's number, plus moles or equivalents when derivable */
@@ -124,8 +163,8 @@ export function dropwiseParts(step) {
 /** Flow diagram left side: material entering the main stream */
 export function inflowLabel(step, row) {
   if (step.freeform) return null
-  if (['add', 'extract', 'wash', 'filter'].includes(step.type)) {
-    const name = compoundName(row)
+  if (['add', 'extract', 'wash', 'filter', 'recrystallize'].includes(step.type)) {
+    const name = step.type === 'extract' ? mixName(row) : compoundName(row)
     if (!name) return null
     const label = [name, quantityText(step, row, { primaryOnly: true })].filter(Boolean).join(' ')
     const dissolve = step.type === 'add' ? dissolveText(step, row) : null
@@ -151,6 +190,10 @@ export function outflowLabel(step, row) {
       return step.kept === 'pellet' ? 'Supernatant' : 'Pellet'
     case 'evaporate':
       return 'Solvent removed'
+    case 'recrystallize':
+      return 'Mother liquor'
+    case 'column':
+      return 'Other fractions'
     case 'dry':
       return step.method === 'agent' ? 'Drying agent filtered off' : 'Water removed'
     case 'monitor':

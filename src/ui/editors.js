@@ -1,9 +1,11 @@
 // Field editors for each step type. Every type can switch to freeform manual entry (handled by the card shell).
 import { el } from './dom.js'
+import { iconMarkup } from './icons.js'
 import { compoundPicker } from './picker.js'
 import { chipRow, field, numberField, onTextInput, row, selectField, textField } from './fields.js'
 import { amountBlock, compoundControl, derivedStrip, dissolveFields, pickCompound } from './editor-parts.js'
 import { centrifugeEditor, filterEditor } from './editors-workup.js'
+import { columnEditor, recrystallizeEditor } from './editors-purify.js'
 import {
   ATMOSPHERES, DRY_METHODS, EVAPORATE_METHODS,
   MONITOR_METHODS, PHASES, RAMPS, STIR_SPECIALS,
@@ -124,9 +126,14 @@ function stirEditor(step, ctx) {
 
 // ── Extract / Wash ────────────────────────────────────────────────────────────
 function extractEditor(step, ctx) {
-  const { doc, actions, row: metrics } = ctx
+  const { doc, actions, store, row: metrics } = ctx
   const compound = doc.compounds.find((c) => c.id === step.solventId) ?? null
-  return [
+  const ratio = Array.isArray(step.ratio) ? step.ratio : [1, 1]
+  const setRatio = (index, value) => actions.updateStep(step.id, {
+    ratio: ratio.map((part, i) => (i === index ? (value ?? 1) : part)),
+  }, { key: `ratio${index}` })
+
+  const parts = [
     row([
       field('Solvent', compoundControl(ctx, step.solventId, compoundPicker({
         doc, value: step.solventId, filter: 'solvent', placeholder: 'Select solvent',
@@ -138,9 +145,44 @@ function extractEditor(step, ctx) {
         onChange: (value) => actions.updateStep(step.id, { phaseKept: value }),
       }),
     ]),
-    amountBlock(step, ctx, compound),
-    derivedStrip(metrics, step),
+    // A co-solvent is mixed into the same portion; the ratio splits the amount between the two
+    el('div', { style: { display: 'flex', gap: '6px', alignItems: 'flex-end' } }, [
+      el('div', { style: { flex: '1', minWidth: '0' } }, field('Co-solvent (optional)', compoundControl(ctx, step.solvent2Id, compoundPicker({
+        doc, value: step.solvent2Id, filter: 'solvent', placeholder: 'None',
+        onPick: (choice) => {
+          const id = choice.compoundId ?? actions.addCompound(choice.create).id
+          actions.updateStep(step.id, { solvent2Id: id })
+        },
+      })))),
+      step.solvent2Id
+        ? el('button', {
+            class: 'btn btn--ghost btn--icon',
+            type: 'button',
+            title: 'No co-solvent',
+            onclick: () => actions.updateStep(step.id, { solvent2Id: null }),
+            html: iconMarkup('close', { size: 14 }),
+          })
+        : null,
+    ]),
   ]
+
+  if (step.solvent2Id) {
+    parts.push(row([
+      numberField('Parts solvent', {
+        name: 'ratioA', value: ratio[0],
+        onInput: (value) => setRatio(0, value),
+        onBlur: () => store.flush(),
+      }),
+      numberField('Parts co-solvent', {
+        name: 'ratioB', value: ratio[1],
+        onInput: (value) => setRatio(1, value),
+        onBlur: () => store.flush(),
+      }),
+    ], { tight: true }))
+  }
+
+  parts.push(amountBlock(step, ctx, compound), derivedStrip(metrics, step))
+  return parts
 }
 
 function washEditor(step, ctx) {
@@ -251,6 +293,8 @@ const EDITORS = {
   filter: filterEditor,
   centrifuge: centrifugeEditor,
   evaporate: evaporateEditor,
+  recrystallize: recrystallizeEditor,
+  column: columnEditor,
   dry: dryEditor,
   monitor: monitorEditor,
 }

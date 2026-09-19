@@ -70,6 +70,23 @@ export const STEP_TYPES = {
     compoundField: null,
     flowSide: 'out',
   },
+  recrystallize: {
+    label: 'Recrystallize',
+    labelEn: 'Recrystallisation',
+    family: FAMILY.separate,
+    icon: 'recrystallize',
+    compoundField: 'solventId',
+    flowSide: 'both',
+  },
+  column: {
+    label: 'Column',
+    labelEn: 'Column chromatography',
+    family: FAMILY.separate,
+    icon: 'column',
+    // The eluent is written in the narrative but never quantified, so there is no compound field
+    compoundField: null,
+    flowSide: 'out',
+  },
   dry: {
     label: 'Dry',
     labelEn: 'Drying',
@@ -88,7 +105,10 @@ export const STEP_TYPES = {
   },
 }
 
-export const STEP_ORDER = ['add', 'stir', 'extract', 'wash', 'filter', 'centrifuge', 'evaporate', 'dry', 'monitor']
+export const STEP_ORDER = [
+  'add', 'stir', 'extract', 'wash', 'filter', 'centrifuge',
+  'evaporate', 'recrystallize', 'column', 'dry', 'monitor',
+]
 
 export const AMOUNT_MODES = {
   mass: { label: 'Mass', unit: 'g', hint: 'g' },

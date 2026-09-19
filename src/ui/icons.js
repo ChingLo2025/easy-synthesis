@@ -26,6 +26,10 @@ export const ICONS = Object.freeze({
   dry: ['M12.5 5.2c2.4 3 3.7 5 3.7 6.6a3.7 3.7 0 0 1-7.4 0c0-1.6 1.3-3.6 3.7-6.6z', 'M6.5 18.5l12-12'],
   // Monitor: TLC plate with spots
   monitor: ['M7.5 3.5h9a1 1 0 0 1 1 1v15a1 1 0 0 1-1 1h-9a1 1 0 0 1-1-1v-15a1 1 0 0 1 1-1z', 'M6.5 16.5h11', 'M10.2 11.4a1.3 1.3 0 1 0 0-.01z', 'M14.3 8.4a1.3 1.3 0 1 0 0-.01z'],
+  // Recrystallize: two crystals growing on a surface
+  recrystallize: ['M10.5 3.8l4.2 4.6-4.2 4.6-4.2-4.6z', 'M17.6 11.5l2.9 3.2-2.9 3.2-2.9-3.2z', 'M4.5 20.5h15'],
+  // Column: chromatography column with a band and a drop leaving the tip
+  column: ['M10 3.5h5v12.2a2.5 2.5 0 0 1-5 0z', 'M9 3.5h7', 'M10 9.3h5', 'M12.5 19.2a1.2 1.2 0 1 0 0 2.4 1.2 1.2 0 0 0 0-2.4z'],
   // Filter: funnel with the liquid level on the filter paper
   filter: ['M4.5 4.5h16l-6 7.5v6.5l-4 2v-8.5z', 'M8.2 8.5h8.6'],
   // Centrifuge: rotor seen from above with three tube slots (round shapes slightly larger for optical balance)
