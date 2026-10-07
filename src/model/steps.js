@@ -159,7 +159,11 @@ export const MONITOR_METHODS = {
   TLC: { label: 'TLC', labelEn: 'TLC' },
   HPLC: { label: 'HPLC', labelEn: 'HPLC' },
   GC: { label: 'GC', labelEn: 'GC' },
+  GCMS: { label: 'GC-MS', labelEn: 'GC-MS' },
+  LCMS: { label: 'LC-MS', labelEn: 'LC-MS' },
+  GPC: { label: 'GPC', labelEn: 'GPC' },
   NMR: { label: 'NMR', labelEn: 'NMR' },
+  FTIR: { label: 'FTIR', labelEn: 'FTIR' },
   retain: { label: 'Retain sample', labelEn: 'sample retained' },
 }
 

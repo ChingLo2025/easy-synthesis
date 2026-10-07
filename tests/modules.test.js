@@ -4,6 +4,7 @@ import { compute } from '../src/engine/compute.js'
 import { generateNarrative } from '../src/ui/narrative.js'
 import { createCompound, createDocument, createStep, normalizeDocument, serializeDocument } from '../src/model/schema.js'
 import { formatAmount, formatMass, formatVolume } from '../src/model/units.js'
+import { MONITOR_METHODS } from '../src/model/steps.js'
 
 function doc() {
   const d = createDocument()
@@ -98,6 +99,18 @@ test('a column without an eluent is flagged', () => {
   const d = doc()
   d.steps = [createStep('column')]
   assert.ok(compute(d).warnings.some((w) => w.code === 'eluent-missing'))
+})
+
+test('the monitor step offers the usual analysis methods', () => {
+  assert.deepEqual(Object.keys(MONITOR_METHODS), ['TLC', 'HPLC', 'GC', 'GCMS', 'LCMS', 'GPC', 'NMR', 'FTIR', 'retain'])
+})
+
+test('a monitor step writes the chosen method in both languages', () => {
+  const d = doc()
+  d.steps = [createStep('monitor', { method: 'GCMS', interval: 30 })]
+  const n = narrate(d)
+  assert.ok(n.zh.join('').includes('以 GC-MS 每 30 分鐘追蹤反應'), n.zh.join(''))
+  assert.ok(n.en.join(' ').includes('monitored by GC-MS every 30 min'), n.en.join(' '))
 })
 
 test('the theoretical yield uses the product equivalents against the basis', () => {
