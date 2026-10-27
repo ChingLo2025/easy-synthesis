@@ -4,12 +4,12 @@ import { iconMarkup } from './icons.js'
 import { dropwiseParts, inflowLabel, outflowLabel, stepSummary } from './summary.js'
 import { FILTER_KEPT, FILTER_METHODS, STEP_TYPES } from '../model/steps.js'
 import { numberSteps } from '../model/schema.js'
-import { formatAmount, formatMass } from '../model/units.js'
+import { DISPLAY_DIGITS, formatAmount, formatMass } from '../model/units.js'
 
 const ARROW_IN = '<svg class="flow__arrow" width="24" height="12" viewBox="0 0 24 12" aria-hidden="true"><path d="M1 6.5h15"/><polygon points="15.5,3 23,6.5 15.5,10"/></svg>'
 const LINK = '<svg width="12" height="24" viewBox="0 0 12 24" aria-hidden="true"><path d="M6.5 1v15"/><polygon points="3,15.5 6.5,22.5 10,15.5"/></svg>'
 
-export function renderFlow(doc, metrics, { selectedId = null, onSelect = null } = {}) {
+export function renderFlow(doc, metrics, { selectedId = null, onSelect = null, measure = 'driver' } = {}) {
   const flow = el('div', { class: 'flow' })
   if (!doc.steps.length) {
     flow.append(el('div', { class: 'flow__empty' }, [
@@ -21,10 +21,15 @@ export function renderFlow(doc, metrics, { selectedId = null, onSelect = null } 
   }
 
   const numbers = numberSteps(doc.steps)
-  appendSteps(flow, doc.steps, { doc, metrics, numbers, selectedId, onSelect, depth: 0 })
+  const labels = { measure, digits: DISPLAY_DIGITS }
+  appendSteps(flow, doc.steps, { doc, metrics, numbers, selectedId, onSelect, labels, depth: 0 })
 
   const yieldText = metrics?.theoretical?.hasProduct
-    ? [metrics.theoretical.name || 'Product', formatMass(metrics.theoretical.mass) ?? formatAmount(metrics.theoretical.n)]
+    ? [
+        metrics.theoretical.name || 'Product',
+        formatMass(metrics.theoretical.mass, { digits: DISPLAY_DIGITS })
+          ?? formatAmount(metrics.theoretical.n, { digits: DISPLAY_DIGITS }),
+      ]
         .filter(Boolean).join(' ')
     : null
   if (yieldText) {
@@ -57,7 +62,7 @@ function stepRow(step, ctx) {
   const { doc, metrics, numbers, selectedId, onSelect } = ctx
   const meta = STEP_TYPES[step.type]
   const row = metrics?.byStep.get(step.id) ?? null
-  const inLabel = inflowLabel(step, row)
+  const inLabel = inflowLabel(step, row, ctx.labels)
   const outLabel = outflowLabel(step, row)
 
   const node = el('div', {

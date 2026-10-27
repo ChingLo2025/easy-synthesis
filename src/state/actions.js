@@ -59,7 +59,7 @@ export function createActions(store) {
   function updateDissolve(stepId, patch, { key = null } = {}) {
     const current = findStep(store.getState().doc, stepId)?.step
     if (!current) return
-    const next = patch === null ? null : { solventId: null, volume: null, ...(current.dissolve ?? {}), ...patch }
+    const next = patch === null ? null : { solventId: null, mode: 'volume', value: null, ...(current.dissolve ?? {}), ...patch }
     updateStep(stepId, { dissolve: next }, { key })
   }
 

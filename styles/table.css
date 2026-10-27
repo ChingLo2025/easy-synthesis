@@ -14,6 +14,7 @@
 .doc-section__head { display: flex; align-items: baseline; gap: 8px; border-bottom: 1px solid var(--line); padding-bottom: 6px; }
 /* Blocks can be hidden to keep the printout short; a hidden block is not rendered at all */
 .doc-section__toggle { align-self: center; width: 22px; height: 22px; margin-left: -4px; color: var(--ink-4); flex: none; }
+.doc-section__select { margin-left: auto; width: auto; min-height: 24px; padding: 2px 6px; font-size: 12px; color: var(--ink-2); }
 .doc-section__toggle:hover { color: var(--ink-2); }
 .doc-section[data-hidden="true"] .doc-section__head { border-bottom-style: dashed; }
 .doc-section[data-hidden="true"] h3 { color: var(--ink-3); }

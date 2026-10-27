@@ -24,6 +24,9 @@ Click *Load example* at the top of the right panel to see a complete procedure.
 - **Theoretical yield**: set the product name, MW and equivalents at the bottom of the compounds dialog. Equivalents are counted against the basis, so a dimer is 0.5 and two products from one substrate are 2; leaving it empty means 1. Without a MW only moles are shown.
 - **Mixed extraction solvent**: an extraction takes an optional co-solvent and a ratio, e.g. EtOAc/hexane 1:1. The portion is split between the two in the quantities table and written as one mixture in the narrative.
 - **Hiding blocks**: the chevron beside Flow diagram, Quantities, Totals, To review and each narrative language hides that block. Inside Quantities, each role group (Reactant, Reagent, Solvent…) has its own chevron, so you can drop just the solvents, for example. Hidden blocks and groups are left out of the page and the printout, and the choice is remembered in this browser.
+- **Flow labels**: the dropdown beside *Flow diagram* chooses what the side labels show — the field you entered, or always moles, mass, volume or equivalents. It applies to the printout as well.
+- **Significant figures**: the quantities table and the flow diagram show four (5.000 g, 0.03330 eq); the narrative keeps the shorter three-figure form so sentences stay readable.
+- **Pre-dissolve**: the amount can be given by volume (mL) or by mass (g).
 - **Undo**: Ctrl+Z to undo, Ctrl+Shift+Z or Ctrl+Y to redo.
 - **Templates**: save a whole procedure, or a group of steps such as a standard workup, and reuse it from *Templates* in the left panel.
 - **Phones and small windows**: at 1024 px wide and below, the layout switches to *Steps* / *Preview* tabs.

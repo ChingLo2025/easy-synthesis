@@ -3,7 +3,7 @@
 import { el } from './dom.js'
 import { iconMarkup } from './icons.js'
 import { ROLES } from '../model/steps.js'
-import { formatAmount, formatEquiv, formatMass, formatVolume } from '../model/units.js'
+import { DISPLAY_DIGITS, formatAmount, formatEquiv, formatMass, formatVolume } from '../model/units.js'
 
 /** Auxiliary rows are tagged so the table shows why a solvent is listed twice */
 const PART_LABELS = { dissolve: 'pre-dissolve', cosolvent: 'co-solvent', antisolvent: 'antisolvent' }
@@ -110,13 +110,13 @@ function dataRow(row, { copy }) {
 
 function formatCell(key, row) {
   switch (key) {
-    case 'n': return row.n === null ? null : formatAmount(row.n)
-    case 'mass': return row.mass === null ? null : formatMass(row.mass)
-    case 'volume': return row.volume === null ? null : formatVolume(row.volume)
+    case 'n': return row.n === null ? null : formatAmount(row.n, { digits: DISPLAY_DIGITS })
+    case 'mass': return row.mass === null ? null : formatMass(row.mass, { digits: DISPLAY_DIGITS })
+    case 'volume': return row.volume === null ? null : formatVolume(row.volume, { digits: DISPLAY_DIGITS })
     case 'equiv':
       if (row.equiv === null) return null
       if (row.compound?.role === 'solvent' && !driverMatches(row.driver, 'equiv')) return null
-      return `${formatEquiv(row.equiv)}`
+      return `${formatEquiv(row.equiv, DISPLAY_DIGITS)}`
     default: return null
   }
 }
@@ -131,18 +131,18 @@ function driverMatches(driver, key) {
 function totals(doc, metrics) {
   const cards = []
   if (metrics.solvent.reaction !== null) {
-    cards.push(totalCard('Reaction solvent', formatVolume(metrics.solvent.reaction), 'For sizing the vessel'))
+    cards.push(totalCard('Reaction solvent', formatVolume(metrics.solvent.reaction, { digits: DISPLAY_DIGITS }), 'For sizing the vessel'))
   }
   if (metrics.solvent.total !== null) {
-    cards.push(totalCard('Total solvent', formatVolume(metrics.solvent.total), 'Incl. workup'))
+    cards.push(totalCard('Total solvent', formatVolume(metrics.solvent.total, { digits: DISPLAY_DIGITS }), 'Incl. workup'))
   }
   if (metrics.basis.ok) {
-    cards.push(totalCard('Basis moles', formatAmount(metrics.basis.n), metrics.basis.compound?.name ?? ''))
+    cards.push(totalCard('Basis moles', formatAmount(metrics.basis.n, { digits: DISPLAY_DIGITS }), metrics.basis.compound?.name ?? ''))
   }
   if (metrics.theoretical.n !== null) {
     const value = metrics.theoretical.mass !== null
-      ? formatMass(metrics.theoretical.mass)
-      : formatAmount(metrics.theoretical.n)
+      ? formatMass(metrics.theoretical.mass, { digits: DISPLAY_DIGITS })
+      : formatAmount(metrics.theoretical.n, { digits: DISPLAY_DIGITS })
     const hint = [
       metrics.theoretical.hasProduct
         ? metrics.theoretical.name || 'Assuming 100% conversion of the basis'

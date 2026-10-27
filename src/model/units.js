@@ -68,36 +68,59 @@ function trimZeros(text) {
   return text.includes('.') ? text.replace(/\.?0+$/, '') : text
 }
 
+/** The document preview and the printout show four significant figures; the narrative keeps three */
+export const DISPLAY_DIGITS = 4
+
+/** Decimals needed to show `digits` significant figures */
+function decimalsFor(value, digits) {
+  const magnitude = Math.floor(Math.log10(Math.abs(value)))
+  return Math.min(6, Math.max(0, digits - 1 - magnitude))
+}
+
+/** Exactly `digits` significant figures, trailing zeros kept: 5 g reads "5.000" at four digits */
+function fixed(value, digits) {
+  if (value === 0) return digits > 1 ? (0).toFixed(digits - 1) : '0'
+  const abs = Math.abs(value)
+  if (abs >= 1e5 || abs < 1e-4) return value.toExponential(Math.max(0, digits - 1)).replace('e', '×10^')
+  return value.toFixed(decimalsFor(value, digits))
+}
+
+/** With `digits`: fixed significant figures. Without: the trimmed lab-notebook form. */
+function display(value, digits, minDecimals) {
+  return digits ? fixed(value, digits) : sig(value, SIG_DIGITS, minDecimals)
+}
+
 /** Pick a readable mass unit automatically (SI kg → display string) */
-export function formatMass(kg, { unit, minDecimals = 1 } = {}) {
+export function formatMass(kg, { unit, minDecimals = 1, digits = null } = {}) {
   if (!isNum(kg)) return null
-  if (unit) return `${sig(kg / MASS_UNITS[unit], SIG_DIGITS, minDecimals)} ${unit}`
+  if (unit) return `${display(kg / MASS_UNITS[unit], digits, minDecimals)} ${unit}`
   const g = kgToG(kg)
-  if (Math.abs(g) >= 1000) return `${sig(g / 1000, SIG_DIGITS, minDecimals)} kg`
-  if (Math.abs(g) >= 0.1) return `${sig(g, SIG_DIGITS, minDecimals)} g`
-  return `${sig(g * 1000, SIG_DIGITS, minDecimals)} mg`
+  if (Math.abs(g) >= 1000) return `${display(g / 1000, digits, minDecimals)} kg`
+  if (Math.abs(g) >= 0.1) return `${display(g, digits, minDecimals)} g`
+  return `${display(g * 1000, digits, minDecimals)} mg`
 }
 
 /** SI m³ → display string */
-export function formatVolume(m3, { unit } = {}) {
+export function formatVolume(m3, { unit, digits = null } = {}) {
   if (!isNum(m3)) return null
-  if (unit) return `${sig(m3 / VOLUME_UNITS[unit])} ${unit}`
+  if (unit) return `${display(m3 / VOLUME_UNITS[unit], digits, 0)} ${unit}`
   const ml = m3ToMl(m3)
-  if (Math.abs(ml) >= 1000) return `${sig(ml / 1000)} L`
-  if (Math.abs(ml) >= 0.1) return `${sig(ml)} mL`
-  return `${sig(ml * 1000)} µL`
+  if (Math.abs(ml) >= 1000) return `${display(ml / 1000, digits, 0)} L`
+  if (Math.abs(ml) >= 0.1) return `${display(ml, digits, 0)} mL`
+  return `${display(ml * 1000, digits, 0)} µL`
 }
 
 /** SI mol → display string */
-export function formatAmount(mol, { minDecimals = 1 } = {}) {
+export function formatAmount(mol, { minDecimals = 1, digits = null } = {}) {
   if (!isNum(mol)) return null
-  if (Math.abs(mol) >= 1) return `${sig(mol, SIG_DIGITS, minDecimals)} mol`
-  if (Math.abs(mol) >= 1e-3) return `${sig(mol * 1e3, SIG_DIGITS, minDecimals)} mmol`
-  return `${sig(mol * 1e6, SIG_DIGITS, minDecimals)} µmol`
+  if (Math.abs(mol) >= 1) return `${display(mol, digits, minDecimals)} mol`
+  if (Math.abs(mol) >= 1e-3) return `${display(mol * 1e3, digits, minDecimals)} mmol`
+  return `${display(mol * 1e6, digits, minDecimals)} µmol`
 }
 
-export function formatEquiv(equiv) {
+export function formatEquiv(equiv, digits = null) {
   if (!isNum(equiv)) return null
+  if (digits) return fixed(equiv, digits)
   return equiv >= 100 ? sig(equiv, 4) : sig(equiv, 3, 1)
 }
 

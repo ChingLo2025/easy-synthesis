@@ -4,21 +4,31 @@ import { iconMarkup } from './icons.js'
 import { renderFlow } from './flow.js'
 import { renderMetrics, renderTotals, renderWarnings } from './metrics.js'
 import { generateNarrative, isMarker, narrativeToText } from './narrative.js'
+import { LABEL_MEASURES } from './summary.js'
 
 export const DOC_TABS = [
   { id: 'flow', label: 'Flow & quantities', icon: 'flow' },
   { id: 'text', label: 'Experimental', icon: 'text' },
 ]
 
-export function renderDocument(host, { doc, metrics, tab, selectedId, onSelectStep, onCopy, hidden = {}, onToggle = null }) {
+export function renderDocument(host, {
+  doc, metrics, tab, selectedId, onSelectStep, onCopy,
+  hidden = {}, onToggle = null, measure = 'driver', onMeasureChange = null,
+}) {
   clear(host)
-  const part = (id, title, hint, body) => section({ id, title, hint, body, hidden, onToggle })
+  const part = (id, title, hint, body, control = null) => section({ id, title, hint, body, control, hidden, onToggle })
   host.append(titleBlock(doc))
 
   if (tab === 'text') {
     host.append(narrativeSection(doc, metrics, onCopy, { hidden, onToggle }))
   } else {
-    host.append(part('flow', 'Flow diagram', `${countSteps(doc)} steps`, renderFlow(doc, metrics, { selectedId, onSelect: onSelectStep })))
+    host.append(part(
+      'flow',
+      'Flow diagram',
+      `${countSteps(doc)} steps`,
+      renderFlow(doc, metrics, { selectedId, onSelect: onSelectStep, measure }),
+      onMeasureChange ? measureSelect(measure, onMeasureChange) : null,
+    ))
     host.append(part('quantities', 'Quantities', metrics.basis.compound ? `Basis: ${metrics.basis.compound.name}` : 'No basis set', renderMetrics(doc, metrics, { hidden, onToggle })))
     host.append(part('totals', 'Totals', 'Solvent and yield', renderTotals(doc, metrics)))
     const warnings = renderWarnings(metrics)
@@ -52,16 +62,27 @@ function titleBlock(doc) {
 }
 
 /** A document block. A hidden block is left out of the page, so it is not printed either. */
-function section({ id, title, hint, body, hidden = {}, onToggle = null }) {
+function section({ id, title, hint, body, control = null, hidden = {}, onToggle = null }) {
   const open = !hidden[id]
   return el('section', { class: 'doc-section', dataset: { hidden: String(!open) } }, [
     el('div', { class: 'doc-section__head' }, [
       sectionToggle(id, open, onToggle),
       el('h3', {}, title),
       hint ? el('small', {}, hint) : null,
+      open ? control : null,
     ]),
     open ? body : null,
   ])
+}
+
+/** Which measure the flow labels show; the choice applies to the printout as well */
+function measureSelect(measure, onChange) {
+  return el('select', {
+    class: 'doc-section__select no-print',
+    title: 'What the flow diagram labels show',
+    onchange: (event) => onChange(event.target.value),
+  }, Object.entries(LABEL_MEASURES).map(([id, label]) =>
+    el('option', { value: id, selected: measure === id }, label)))
 }
 
 function sectionToggle(id, open, onToggle) {

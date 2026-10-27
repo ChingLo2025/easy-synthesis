@@ -2,7 +2,8 @@
 import { el } from './dom.js'
 import { iconMarkup } from './icons.js'
 import { compoundPicker } from './picker.js'
-import { field, numberField, numberInput, row } from './fields.js'
+import { chipRow, field, numberField, numberInput, row } from './fields.js'
+import { dissolveAmount } from '../model/schema.js'
 import { AMOUNT_MODES } from '../model/steps.js'
 import { formatAmount, formatEquiv, formatMass, formatVolume, isNum } from '../model/units.js'
 import { recallDefaults } from '../state/prefs.js'
@@ -110,24 +111,31 @@ export function compoundControl(ctx, compoundId, picker) {
   ])
 }
 
-/** Pre-dissolve: pick a solvent and enter its volume (mL) */
+/** Pre-dissolve: pick a solvent, then give the amount by volume (mL) or by mass (g) */
 export function dissolveFields(step, ctx) {
   const { doc, actions, store } = ctx
-  return row([
-    field('Pre-dissolve solvent', compoundControl(ctx, step.dissolve?.solventId, compoundPicker({
-      doc,
-      value: step.dissolve?.solventId ?? null,
-      filter: 'solvent',
-      placeholder: 'Select solvent',
-      onPick: (choice) => {
-        const solventId = choice.compoundId ?? actions.addCompound(choice.create).id
-        actions.updateDissolve(step.id, { solventId })
-      },
-    }))),
-    numberField('Solvent volume', {
-      name: 'dissolveVolume', value: step.dissolve?.volume, suffix: 'mL',
-      onInput: (volume) => actions.updateDissolve(step.id, { volume }, { key: 'dissolveVolume' }),
-      onBlur: () => store.flush(),
-    }),
-  ])
+  const { mode, value } = dissolveAmount(step.dissolve)
+  return [
+    row([
+      field('Pre-dissolve solvent', compoundControl(ctx, step.dissolve?.solventId, compoundPicker({
+        doc,
+        value: step.dissolve?.solventId ?? null,
+        filter: 'solvent',
+        placeholder: 'Select solvent',
+        onPick: (choice) => {
+          const solventId = choice.compoundId ?? actions.addCompound(choice.create).id
+          actions.updateDissolve(step.id, { solventId })
+        },
+      }))),
+      numberField(mode === 'mass' ? 'Solvent mass' : 'Solvent volume', {
+        name: 'dissolveAmount', value, suffix: mode === 'mass' ? 'g' : 'mL',
+        onInput: (next) => actions.updateDissolve(step.id, { value: next }, { key: 'dissolveAmount' }),
+        onBlur: () => store.flush(),
+      }),
+    ]),
+    chipRow('Measured by', [
+      { id: 'volume', label: 'Volume', active: mode !== 'mass' },
+      { id: 'mass', label: 'Mass', active: mode === 'mass' },
+    ], (item) => actions.updateDissolve(step.id, { mode: item.id }), { rank: false, namespace: 'dissolveMode' }),
+  ]
 }

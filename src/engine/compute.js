@@ -7,7 +7,7 @@
 //
 // Driving-field rule: each compound has exactly one driving field per step (amount.mode);
 // the rest are derived values. No general constraint solver.
-import { flattenSteps, numberSteps, compoundById } from '../model/schema.js'
+import { flattenSteps, numberSteps, compoundById, dissolveAmount } from '../model/schema.js'
 import { STEP_TYPES, MAX_BRANCH_DEPTH, ROLE_ORDER } from '../model/steps.js'
 import { concToSI, densityToSI, dimensionOf, gToKg, isNum, mwToSI, toSI } from '../model/units.js'
 
@@ -219,10 +219,11 @@ function auxRows({ doc, step, row, number, basis, warnings }) {
     if (!solvent) {
       warnings.push({ level: WARN.warn, stepId: step.id, code: 'dissolve-solvent', message: `Step ${number}: no pre-dissolve solvent selected.` })
     } else {
-      if (!isNum(step.dissolve.volume)) {
-        warnings.push({ level: WARN.warn, stepId: step.id, code: 'dissolve-volume', message: `Step ${number}: the pre-dissolve solvent volume is not set.` })
+      const amount = dissolveAmount(step.dissolve)
+      if (!isNum(amount.value)) {
+        warnings.push({ level: WARN.warn, stepId: step.id, code: 'dissolve-volume', message: `Step ${number}: the pre-dissolve solvent amount is not set.` })
       }
-      out.push(auxRow('dissolve', solvent, { mode: 'volume', value: step.dissolve.volume }, { step, row, number, basis }))
+      out.push(auxRow('dissolve', solvent, amount, { step, row, number, basis }))
     }
   }
 

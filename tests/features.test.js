@@ -120,7 +120,7 @@ test('centrifugation in × g, keeping the supernatant', () => {
 test('new fields survive export and re-import', () => {
   const d = doc()
   d.steps = [
-    createStep('add', { compoundId: 'A', dissolve: { solventId: 'THF', volume: 20 } }),
+    createStep('add', { compoundId: 'A', dissolve: { solventId: 'THF', mode: 'volume', value: 20 } }),
     createStep('stir', { ramp: 'down', rampRate: 1 }),
     createStep('filter', { solventId: 'EtOH', rinseCount: 3 }),
     createStep('centrifuge', { speed: 4000 }),

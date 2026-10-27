@@ -3,8 +3,9 @@ import assert from 'node:assert/strict'
 import { compute } from '../src/engine/compute.js'
 import { generateNarrative } from '../src/ui/narrative.js'
 import { createCompound, createDocument, createStep, normalizeDocument, serializeDocument } from '../src/model/schema.js'
-import { formatAmount, formatMass, formatVolume } from '../src/model/units.js'
+import { formatAmount, formatEquiv, formatMass, formatVolume } from '../src/model/units.js'
 import { MONITOR_METHODS } from '../src/model/steps.js'
+import { inflowLabel } from '../src/ui/summary.js'
 
 function doc() {
   const d = createDocument()
@@ -99,6 +100,46 @@ test('a column without an eluent is flagged', () => {
   const d = doc()
   d.steps = [createStep('column')]
   assert.ok(compute(d).warnings.some((w) => w.code === 'eluent-missing'))
+})
+
+test('display formatters can show four significant figures, keeping trailing zeros', () => {
+  assert.equal(formatMass(0.005), '5.0 g')
+  assert.equal(formatMass(0.005, { digits: 4 }), '5.000 g')
+  assert.equal(formatEquiv(0.0333), '0.0333')
+  assert.equal(formatEquiv(0.0333, 4), '0.03330')
+  assert.equal(formatAmount(0.0506765, { digits: 4 }), '50.68 mmol')
+  assert.equal(formatVolume(50e-6, { digits: 4 }), '50.00 mL')
+})
+
+test('flow labels can show a chosen measure instead of the field entered', () => {
+  const d = doc()
+  d.steps = [createStep('add', { compoundId: 'A', amount: { mode: 'mass', value: 10 } })]
+  const row = compute(d).byStep.get(d.steps[0].id)
+  assert.equal(inflowLabel(d.steps[0], row), 'Material A 10.0 g')
+  assert.equal(inflowLabel(d.steps[0], row, { measure: 'equiv', digits: 4 }), 'Material A 1.000 eq')
+  assert.equal(inflowLabel(d.steps[0], row, { measure: 'n', digits: 4 }), 'Material A 50.00 mmol')
+  assert.equal(inflowLabel(d.steps[0], row, { measure: 'mass', digits: 4 }), 'Material A 10.00 g')
+})
+
+test('a pre-dissolve amount can be given by mass', () => {
+  const d = doc()
+  d.steps = [createStep('add', {
+    compoundId: 'A', amount: { mode: 'mass', value: 10 },
+    dissolve: { solventId: 'EA', mode: 'mass', value: 5 },
+  })]
+  const aux = compute(d).rows.find((r) => r.part === 'dissolve')
+  assert.equal(formatMass(aux.mass), '5.0 g')
+  assert.ok(narrate(d).zh.join('').includes('溶於 EtOAc (5.0 g)'), narrate(d).zh.join(''))
+})
+
+test('a pre-dissolve volume saved by an older version still works', () => {
+  const d = doc()
+  d.steps = [createStep('add', {
+    compoundId: 'A', amount: { mode: 'mass', value: 10 },
+    dissolve: { solventId: 'EA', volume: 20 },
+  })]
+  const aux = compute(d).rows.find((r) => r.part === 'dissolve')
+  assert.equal(formatVolume(aux.volume), '20 mL')
 })
 
 test('the monitor step offers the usual analysis methods', () => {

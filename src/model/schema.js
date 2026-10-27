@@ -251,7 +251,18 @@ function normalizeStep(raw) {
 
 function normalizeDissolve(raw) {
   if (!raw || typeof raw !== 'object') return null
-  return { solventId: raw.solventId ?? null, volume: num(raw.volume) }
+  const { mode, value } = dissolveAmount(raw)
+  return { solventId: raw.solventId ?? null, mode, value }
+}
+
+/**
+ * The pre-dissolve amount, as mass or volume.
+ * Reads both the current { mode, value } shape and the plain { volume } older files carry.
+ */
+export function dissolveAmount(dissolve) {
+  if (!dissolve) return { mode: 'volume', value: null }
+  const mode = dissolve.mode === 'mass' ? 'mass' : 'volume'
+  return { mode, value: num(dissolve.value ?? dissolve.volume) }
 }
 
 /** The product drives the theoretical yield: equivalents against the basis, plus MW for the mass */

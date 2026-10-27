@@ -45,6 +45,8 @@ const autosave = throttledSave(KEYS.doc)
 let metrics = compute(store.getState().doc)
 // Document blocks the user has hidden; a hidden block is left out of the page, so it is not printed
 const hiddenSections = load(KEYS.sections, {}) ?? {}
+// What the flow diagram labels show: the field entered, or always moles, mass, volume or equivalents
+let flowMeasure = load(KEYS.flowLabels, 'driver')
 
 const palette = createPalette({
   root: nodes.palette,
@@ -95,6 +97,8 @@ function render(reason) {
       onCopy: handleCopy,
       hidden: hiddenSections,
       onToggle: toggleSection,
+      measure: flowMeasure,
+      onMeasureChange: setFlowMeasure,
     })
     renderStatus()
     restoreFocus(focus, { keepRaw: reason === 'change' })
@@ -289,6 +293,13 @@ function iconButton(icon, title, onclick, disabled = false) {
 // ── Commands ─────────────────────────────────────────────────────────────────
 function openCompounds(focusId = null) {
   compoundsModal({ store, actions, focusId, onChange: () => render('change') })
+}
+
+/** The flow label measure applies to the preview and the printout; the choice is kept in this browser */
+function setFlowMeasure(measure) {
+  flowMeasure = measure
+  save(KEYS.flowLabels, measure)
+  render('ui')
 }
 
 /** Hiding a block removes it from the page and from the printout; the choice is kept in this browser */

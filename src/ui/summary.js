@@ -3,7 +3,17 @@ import {
   ATMOSPHERES, CENTRIFUGE_KEPT, DRY_METHODS, EVAPORATE_METHODS, FILTER_KEPT, FILTER_METHODS,
   MONITOR_METHODS, PHASES, RAMPS, SPEED_UNITS, STIR_SPECIALS,
 } from '../model/steps.js'
-import { formatAmount, formatDurationEn, formatEquiv, formatMass, formatVolume, isNum, sig } from '../model/units.js'
+import { formatAmount, formatDurationEn, formatEquiv, formatMass, formatVolume, gToKg, isNum, sig } from '../model/units.js'
+import { dissolveAmount } from '../model/schema.js'
+
+/** What a flow diagram label shows; 'driver' follows the field the user typed in */
+export const LABEL_MEASURES = {
+  driver: 'As entered',
+  n: 'Moles',
+  mass: 'Mass',
+  volume: 'Volume',
+  equiv: 'Equivalents',
+}
 
 const DOT = ' · '
 
@@ -110,19 +120,19 @@ export function eluentSummary(step, doc) {
 }
 
 /** Show the driving field's number, plus moles or equivalents when derivable */
-export function quantityText(step, row, { primaryOnly = false } = {}) {
+export function quantityText(step, row, { primaryOnly = false, digits = null } = {}) {
   if (!row) return null
   const mode = step.amount?.mode
   const primary =
-    mode === 'mass' ? formatMass(row.mass)
-    : mode === 'volume' || mode === 'vol_per_g' ? formatVolume(row.volume)
-    : row.equiv !== null ? `${formatEquiv(row.equiv)} eq`
+    mode === 'mass' ? formatMass(row.mass, { digits })
+    : mode === 'volume' || mode === 'vol_per_g' ? formatVolume(row.volume, { digits })
+    : row.equiv !== null ? `${formatEquiv(row.equiv, digits)} eq`
     : null
   const secondary = primaryOnly ? null :
     mode === 'equiv' || mode === 'mol%'
-      ? formatMass(row.mass) ?? formatVolume(row.volume)
+      ? formatMass(row.mass, { digits }) ?? formatVolume(row.volume, { digits })
       : row.equiv !== null && row.compound?.role !== 'solvent'
-        ? `${formatEquiv(row.equiv)} eq`
+        ? `${formatEquiv(row.equiv, digits)} eq`
         : null
   const both = [primary, secondary].filter(Boolean).join(', ')
   return row.repeat > 1 && both ? `${both} x${row.repeat}` : both || null
@@ -136,13 +146,26 @@ function stirTempText(step) {
   return `${RAMPS[step.ramp]?.label ?? ''}${temp ? ` to ${temp}` : ''}${rate}`
 }
 
-/** Pre-dissolve: in THF 20 mL */
+/** Pre-dissolve: in THF 20 mL, or by mass: in THF 5.0 g */
 function dissolveText(step, row, doc) {
   if (!step.dissolve) return null
   const solvent = row?.dissolve?.compound ?? doc?.compounds?.find((c) => c.id === step.dissolve.solventId)
   const name = solvent?.name || '(no solvent)'
-  const volume = isNum(step.dissolve.volume) ? ` ${formatVolume(step.dissolve.volume * 1e-6)}` : ''
-  return `in ${name}${volume}`
+  const { mode, value } = dissolveAmount(step.dissolve)
+  if (!isNum(value)) return `in ${name}`
+  const amount = mode === 'mass' ? formatMass(gToKg(value)) : formatVolume(value * 1e-6)
+  return `in ${name} ${amount}`
+}
+
+/** The measure a flow label shows: the field entered, or always moles, mass, volume or equivalents */
+function measureText(step, row, measure, digits) {
+  switch (measure) {
+    case 'n': return formatAmount(row?.n, { digits })
+    case 'mass': return formatMass(row?.mass, { digits })
+    case 'volume': return formatVolume(row?.volume, { digits })
+    case 'equiv': return isNum(row?.equiv) ? `${formatEquiv(row.equiv, digits)} eq` : null
+    default: return quantityText(step, row, { primaryOnly: true, digits })
+  }
 }
 
 /** Centrifuge speed: 4000 rpm, 3000 × g */
@@ -161,12 +184,12 @@ export function dropwiseParts(step) {
 }
 
 /** Flow diagram left side: material entering the main stream */
-export function inflowLabel(step, row) {
+export function inflowLabel(step, row, { measure = 'driver', digits = null } = {}) {
   if (step.freeform) return null
   if (['add', 'extract', 'wash', 'filter', 'recrystallize'].includes(step.type)) {
     const name = step.type === 'extract' ? mixName(row) : compoundName(row)
     if (!name) return null
-    const label = [name, quantityText(step, row, { primaryOnly: true })].filter(Boolean).join(' ')
+    const label = [name, measureText(step, row, measure, digits)].filter(Boolean).join(' ')
     const dissolve = step.type === 'add' ? dissolveText(step, row) : null
     return dissolve ? `${label} (${dissolve})` : label
   }

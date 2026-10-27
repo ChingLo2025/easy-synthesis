@@ -9,6 +9,7 @@ export const KEYS = {
   frequency: 'frequency',
   lastUsed: 'last-used',
   sections: 'hidden-sections',
+  flowLabels: 'flow-labels',
 }
 
 function fullKey(key) {

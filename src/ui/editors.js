@@ -48,7 +48,7 @@ function addEditor(step, ctx) {
       { id: 'dissolve', label: 'Dissolve in solvent first', active: Boolean(step.dissolve) },
     ], () => actions.updateDissolve(step.id, step.dissolve ? null : {}), { rank: false, namespace: 'dissolve' }),
   ]
-  if (step.dissolve) parts.push(dissolveFields(step, ctx))
+  if (step.dissolve) parts.push(...dissolveFields(step, ctx))
 
   if (step.addMode === 'dropwise') {
     parts.push(row([

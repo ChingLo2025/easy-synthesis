@@ -4,7 +4,7 @@
 //   Pure template step: both Chinese and English are generated normally
 //   With a note       : Chinese is generated with the note appended verbatim; English is left blank
 //   With freeform     : both Chinese and English are left blank
-import { compoundById, numberSteps, flattenSteps } from '../model/schema.js'
+import { compoundById, dissolveAmount, numberSteps, flattenSteps } from '../model/schema.js'
 import { ATMOSPHERES, DRY_METHODS, EVAPORATE_METHODS, FILTER_METHODS, MONITOR_METHODS, PHASES, RAMPS, STIR_SPECIALS } from '../model/steps.js'
 import { speedText } from './summary.js'
 import {
@@ -160,7 +160,7 @@ function clauseZh(step, row, doc) {
       const name = compoundName(row, 'zh')
       const detail = quantityParen(step, row)
       // Pre-dissolve (zh): dissolve X in THF (20 mL), then add it or add it dropwise
-      const lead = step.dissolve ? `將${sp(name)}${detail} 溶於${sp(dissolveName(row, 'zh'))}${volumeParen(row?.dissolve)} 後` : ''
+      const lead = step.dissolve ? `將${sp(name)}${detail} 溶於${sp(dissolveName(row, 'zh'))}${dissolveParen(step, row)} 後` : ''
       if (step.addMode === 'dropwise') {
         const bits = [lead ? `${lead}緩慢滴入` : `緩慢滴入${sp(name)}${detail}`]
         if (isNum(step.duration)) bits.push(`滴加時間 ${formatDuration(step.duration)}`)
@@ -256,7 +256,7 @@ function clauseEn(step, row, doc) {
       const detail = quantityParen(step, row, 'en')
       // Pre-dissolve: a solution of X in THF (20 mL)
       const subject = step.dissolve
-        ? `a solution of ${name}${detail} in ${dissolveName(row, 'en')}${volumeParen(row?.dissolve)}`
+        ? `a solution of ${name}${detail} in ${dissolveName(row, 'en')}${dissolveParen(step, row)}`
         : `${name}${detail}`
       if (step.addMode === 'dropwise') {
         const over = isNum(step.duration) ? ` over ${formatDurationEn(step.duration)}` : ''
@@ -470,6 +470,14 @@ function rampEn(step) {
 
 function dissolveName(row, lang) {
   return compoundName(row?.dissolve ?? null, lang)
+}
+
+/** The pre-dissolve amount, written as a mass or a volume depending on how it was entered */
+function dissolveParen(step, row) {
+  if (!row?.dissolve) return ''
+  if (dissolveAmount(step.dissolve).mode !== 'mass') return volumeParen(row.dissolve)
+  const mass = formatMass(row.dissolve.mass)
+  return mass ? ` (${mass})` : ''
 }
 
 /** Number of filter cake rinses */
